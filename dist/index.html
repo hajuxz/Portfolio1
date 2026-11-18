@@ -1,0 +1,389 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="An editable portfolio for a creative developer and designer."
+    />
+    <meta name="theme-color" content="#f4f1e9" />
+    <title>Orbitfolio — Editable Portfolio</title>
+    <script>
+      (() => {
+        try {
+          const saved = localStorage.getItem("orbitfolio.theme");
+          const dark = matchMedia("(prefers-color-scheme: dark)").matches;
+          document.documentElement.dataset.theme = saved || (dark ? "dark" : "light");
+        } catch (_) {}
+      })();
+    </script>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <a class="skip-link" href="#main-content">Skip to content</a>
+
+
+    <div class="cursor-aura" aria-hidden="true"></div>
+    <div class="noise" aria-hidden="true"></div>
+
+    <aside class="signal-rail" aria-label="Primary navigation">
+      <a class="rail-brand" href="#home" aria-label="Go to home">
+        <span id="railInitials">YN</span><i></i>
+      </a>
+
+      <nav class="rail-nav" aria-label="Portfolio sections">
+        <a class="rail-link is-active" href="#home" data-nav="home" aria-label="Home">
+          <span>01</span><b>Home</b>
+        </a>
+        <a class="rail-link" href="#about" data-nav="about" aria-label="About and services">
+          <span>02</span><b>About</b>
+        </a>
+        <a class="rail-link" href="#work" data-nav="work" aria-label="Selected work">
+          <span>03</span><b>Work</b>
+        </a>
+        <a class="rail-link" href="#skills" data-nav="skills" aria-label="Capabilities">
+          <span>04</span><b>Skills</b>
+        </a>
+        <a class="rail-link" href="#journey" data-nav="journey" aria-label="Experience">
+          <span>05</span><b>Journey</b>
+        </a>
+        <a class="rail-link" href="#contact" data-nav="contact" aria-label="Contact">
+          <span>06</span><b>Contact</b>
+        </a>
+      </nav>
+
+      <div class="rail-actions">
+        <button class="icon-button" id="commandButton" type="button" aria-label="Open quick jump">
+          <span aria-hidden="true">⌘</span>
+        </button>
+        <button class="icon-button" id="themeToggle" type="button" aria-label="Switch to dark theme">
+          <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M20.5 14.2A8.4 8.4 0 0 1 9.8 3.5 8.5 8.5 0 1 0 20.5 14.2Z"/></svg>
+        </button>
+        <button class="icon-button edit-trigger" type="button" data-open-editor aria-label="Edit portfolio">
+          <svg aria-hidden="true" viewBox="0 0 24 24"><path d="m4 16-.8 4.8L8 20l11-11-4-4L4 16Zm9.8-9.8 4 4M13 20h8"/></svg>
+        </button>
+      </div>
+    </aside>
+
+    <header class="mobile-header">
+      <a class="mobile-brand" href="#home" aria-label="Home"><span id="mobileInitials">YN</span><i></i></a>
+      <div class="mobile-header__actions">
+        <button class="text-button" id="mobileCommandButton" type="button">Quick jump</button>
+        <button class="icon-button" type="button" data-open-editor aria-label="Edit portfolio">
+          <svg aria-hidden="true" viewBox="0 0 24 24"><path d="m4 16-.8 4.8L8 20l11-11-4-4L4 16Zm9.8-9.8 4 4M13 20h8"/></svg>
+        </button>
+      </div>
+    </header>
+
+    <main id="main-content">
+      <section class="hero section" id="home" data-section="home" aria-labelledby="heroName">
+        <div class="hero-orbit hero-orbit--one" aria-hidden="true"></div>
+        <div class="hero-orbit hero-orbit--two" aria-hidden="true"></div>
+        <div class="hero__copy">
+          <div class="availability reveal" data-delay="0">
+            <i aria-hidden="true"></i>
+            <span id="heroAvailability">Available for select projects</span>
+          </div>
+          <p class="eyebrow reveal" id="heroEyebrow" data-delay="1">Creative developer · Product thinker</p>
+          <h1 class="hero__title reveal" id="heroName" data-delay="2">Your<br />Name<span>.</span></h1>
+          <div class="role-line reveal" data-delay="3" aria-label="Professional roles">
+            <span>Currently shaping</span>
+            <strong id="rotatingRole">digital products</strong>
+          </div>
+          <p class="hero__lede reveal" id="heroHeadline" data-delay="4">
+            I turn ambitious ideas into useful, memorable digital experiences.
+          </p>
+          <div class="hero__actions reveal" data-delay="5">
+            <a class="button button--primary" href="#work">
+              Explore selected work
+              <span aria-hidden="true">↗</span>
+            </a>
+            <a class="button button--ghost" id="resumeLink" href="#contact">
+              View résumé
+              <span aria-hidden="true">↓</span>
+            </a>
+          </div>
+          <div class="hero__meta reveal" data-delay="6">
+            <div><span>Based in</span><strong id="heroLocation">Your City, Philippines</strong></div>
+            <div><span>Local time</span><strong id="localTime">--:-- PHT</strong></div>
+          </div>
+        </div>
+
+        <div class="hero__visual reveal" data-delay="3">
+          <div class="portrait-frame" id="portraitFrame">
+            <div class="portrait-frame__corner" aria-hidden="true"></div>
+            <img
+              id="profilePortrait"
+              src="assets/portrait-placeholder.svg"
+              alt="Abstract portrait placeholder"
+              width="760"
+              height="920"
+            />
+            <div class="portrait-frame__caption">
+              <span><i></i> Open to meaningful work</span>
+              <b id="portraitIndex">01 / PROFILE</b>
+            </div>
+          </div>
+          <div class="float-card float-card--top" aria-hidden="true">
+            <span>Craft</span>
+            <strong>Strategy × Design × Code</strong>
+          </div>
+          <div class="float-card float-card--bottom" aria-hidden="true">
+            <span>Signal</span>
+            <div class="signal-bars"><i></i><i></i><i></i><i></i><i></i></div>
+          </div>
+        </div>
+
+        <a class="scroll-cue" href="#about">
+          <span>Scroll to discover</span>
+          <i aria-hidden="true"></i>
+        </a>
+      </section>
+
+
+      <section class="about section" id="about" data-section="about" aria-labelledby="aboutTitle">
+        <div class="section-number" aria-hidden="true">02</div>
+        <header class="section-heading reveal">
+          <div>
+            <p class="kicker"><span>02</span> Studio notes</p>
+            <h2 id="aboutTitle">Useful things, beautifully resolved.</h2>
+          </div>
+          <p id="aboutIntro">
+            My work lives where product thinking, visual clarity, and dependable engineering meet.
+          </p>
+        </header>
+
+        <div class="about-grid">
+          <article class="manifesto-card reveal">
+            <p class="manifesto-card__label">A little about me</p>
+            <p class="manifesto-card__quote" id="aboutBio">
+              I care about the small decisions that make technology feel effortless—the structure behind the screen, the pace of an interaction, and the words that make the next step obvious.
+            </p>
+            <div class="manifesto-card__signature">
+              <span id="signatureInitials">YN</span>
+              <i></i>
+              <small>Designing with intent<br />Building with care</small>
+            </div>
+          </article>
+
+          <div class="service-stack" id="servicesGrid" aria-label="Services"></div>
+        </div>
+
+        <section class="interests-panel" id="interests" aria-labelledby="interestsTitle">
+          <h3 id="interestsTitle">Outside the studio</h3>
+          <div id="interestsGrid"></div>
+        </section>
+      </section>
+
+      <section class="work section" id="work" data-section="work" aria-labelledby="workTitle">
+        <div class="section-number" aria-hidden="true">03</div>
+        <header class="section-heading reveal">
+          <div>
+            <p class="kicker"><span>03</span> Selected work</p>
+            <h2 id="workTitle">Projects with a point of view.</h2>
+          </div>
+          <p>Open a project to explore its brief, design decisions, and tools.</p>
+        </header>
+
+        <div class="filter-row reveal" aria-label="Filter projects">
+          <div id="projectFilters" class="filter-list"></div>
+          <span id="projectCount" aria-live="polite"></span>
+        </div>
+        <div class="projects-list" id="projectsList"></div>
+      </section>
+
+      <section class="skills section" id="skills" data-section="skills" aria-labelledby="skillsTitle">
+        <div class="section-number" aria-hidden="true">04</div>
+        <header class="section-heading reveal">
+          <div>
+            <p class="kicker"><span>04</span> Capability map</p>
+            <h2 id="skillsTitle">A flexible toolkit for real problems.</h2>
+          </div>
+          <p>The disciplines and tools I use for interface design, development, and data visualization.</p>
+        </header>
+
+        <div class="capability-grid" id="skillsGrid"></div>
+
+        <div class="process-panel reveal">
+          <div class="process-panel__heading">
+            <p class="kicker"><span>→</span> Working method</p>
+            <p>Clear checkpoints, fast feedback, no mystery.</p>
+          </div>
+          <ol class="process-list">
+            <li><span>01</span><strong>Listen</strong><p>Frame the real need before choosing the solution.</p></li>
+            <li><span>02</span><strong>Shape</strong><p>Turn requirements into a focused system and story.</p></li>
+            <li><span>03</span><strong>Build</strong><p>Prototype, test, and refine the moments that matter.</p></li>
+            <li><span>04</span><strong>Launch</strong><p>Ship cleanly, learn from use, and improve with purpose.</p></li>
+          </ol>
+        </div>
+      </section>
+
+      <section class="journey section" id="journey" data-section="journey" aria-labelledby="journeyTitle">
+        <div class="section-number" aria-hidden="true">05</div>
+        <header class="section-heading reveal">
+          <div>
+            <p class="kicker"><span>05</span> Journey log</p>
+            <h2 id="journeyTitle">Experience that compounds.</h2>
+          </div>
+          <p>A living timeline of roles, education, milestones, and the lessons carried forward.</p>
+        </header>
+
+        <div class="timeline-shell reveal">
+          <div class="timeline-rail" aria-hidden="true"><i></i></div>
+          <div class="timeline-list" id="timelineList"></div>
+        </div>
+      </section>
+
+      <section class="contact section" id="contact" data-section="contact" aria-labelledby="contactTitle">
+        <div class="contact-panel reveal">
+          <div class="contact-panel__glow" aria-hidden="true"></div>
+          <div class="contact-copy">
+            <p class="kicker kicker--light"><span>06</span> Start a conversation</p>
+            <h2 id="contactTitle">Have a good problem?<br />Let’s make something <em>useful.</em></h2>
+            <p id="contactIntro">Tell me what you’re building, what feels stuck, or where you want to go next.</p>
+            <div class="contact-direct">
+              <span>Email directly</span>
+              <a id="contactEmail" href="mailto:hello@example.com">hello@example.com</a>
+              <button id="copyEmail" type="button">Copy email</button>
+            </div>
+            <div class="social-list" id="socialList" aria-label="Social links"></div>
+          </div>
+
+          <form class="contact-form" id="contactForm">
+            <div class="field-row">
+              <label>
+                <span>Your name</span>
+                <input name="name" autocomplete="name" required maxlength="80" placeholder="Maria Santos" />
+              </label>
+              <label>
+                <span>Email address</span>
+                <input name="email" type="email" autocomplete="email" required maxlength="120" placeholder="maria@example.com" />
+              </label>
+            </div>
+            <label>
+              <span>What’s the project?</span>
+              <input name="subject" required maxlength="140" placeholder="A quick overview or working title" />
+            </label>
+            <label>
+              <span>Tell me a little more</span>
+              <textarea name="message" required maxlength="1200" rows="5" placeholder="Goals, timeline, constraints—anything useful."></textarea>
+            </label>
+            <button class="button button--ink" type="submit">
+              Prepare email <span aria-hidden="true">↗</span>
+            </button>
+            <p class="form-note">This opens your email app. Nothing is stored on this website.</p>
+          </form>
+        </div>
+      </section>
+
+      <footer class="site-footer">
+        <div>
+          <a href="#home" class="footer-mark" id="footerMark">YN<span>.</span></a>
+          <p id="footerNote">Built with intention. Ready to make it yours.</p>
+        </div>
+        <p>© <span id="footerYear"></span> <span id="footerName">Your Name</span></p>
+        <a href="#home">Back to top ↑</a>
+      </footer>
+    </main>
+
+    <nav class="mobile-nav" aria-label="Mobile navigation">
+      <a class="is-active" href="#home" data-nav="home"><span>⌂</span><b>Home</b></a>
+      <a href="#work" data-nav="work"><span>◫</span><b>Work</b></a>
+      <button type="button" data-open-editor><span>✎</span><b>Edit</b></button>
+      <a href="#skills" data-nav="skills"><span>✦</span><b>Skills</b></a>
+      <a href="#contact" data-nav="contact"><span>↗</span><b>Contact</b></a>
+    </nav>
+
+    <dialog class="project-dialog" id="projectDialog" aria-labelledby="projectDialogTitle">
+      <div class="dialog-shell">
+        <button class="dialog-close" type="button" data-close-project aria-label="Close project details">×</button>
+        <div id="projectDialogContent"></div>
+      </div>
+    </dialog>
+
+    <dialog class="command-dialog" id="commandDialog" aria-labelledby="commandTitle">
+      <div class="command-shell">
+        <div class="command-search">
+          <span aria-hidden="true">⌕</span>
+          <label class="sr-only" for="commandInput">Search portfolio commands</label>
+          <input id="commandInput" autocomplete="off" placeholder="Jump to a section or action…" />
+          <kbd>ESC</kbd>
+        </div>
+        <p id="commandTitle">Quick jump</p>
+        <div id="commandResults" class="command-results"></div>
+      </div>
+    </dialog>
+
+    <dialog class="studio-dialog" id="studioDialog" aria-labelledby="studioTitle">
+      <div class="studio-shell">
+        <header class="studio-header">
+          <div>
+            <p class="kicker"><span>✦</span> Local editor</p>
+            <h2 id="studioTitle">Portfolio Studio</h2>
+            <p>Changes are saved to this browser. Export a backup to move them elsewhere.</p>
+          </div>
+          <button class="dialog-close" type="button" data-close-editor aria-label="Close portfolio editor">×</button>
+        </header>
+
+        <div class="studio-status" role="status" aria-live="polite">
+          <span id="saveState"><i></i> Previewing saved content</span>
+          <b>Browser-local</b>
+        </div>
+
+        <div class="studio-tabs" role="tablist" aria-label="Editor sections">
+          <button class="is-active" type="button" role="tab" aria-selected="true" data-editor-tab="profile">Profile</button>
+          <button type="button" role="tab" aria-selected="false" data-editor-tab="projects">Projects</button>
+          <button type="button" role="tab" aria-selected="false" data-editor-tab="skills">Skills</button>
+          <button type="button" role="tab" aria-selected="false" data-editor-tab="journey">Journey</button>
+          <button type="button" role="tab" aria-selected="false" data-editor-tab="contact">Contact</button>
+          <button type="button" role="tab" aria-selected="false" data-editor-tab="appearance">Style</button>
+        </div>
+
+        <form class="studio-form" id="studioForm">
+          <div class="editor-panel is-active" id="editor-profile" role="tabpanel"></div>
+          <div class="editor-panel" id="editor-projects" role="tabpanel" hidden></div>
+          <div class="editor-panel" id="editor-skills" role="tabpanel" hidden></div>
+          <div class="editor-panel" id="editor-journey" role="tabpanel" hidden></div>
+          <div class="editor-panel" id="editor-contact" role="tabpanel" hidden></div>
+          <div class="editor-panel" id="editor-appearance" role="tabpanel" hidden></div>
+        </form>
+
+        <footer class="studio-footer">
+          <div class="studio-footer__tools">
+            <button class="text-button" id="undoEditor" type="button">Undo session</button>
+            <button class="text-button" id="exportContent" type="button">Export JSON</button>
+            <label class="text-button file-button">
+              Import JSON
+              <input id="importContent" type="file" accept="application/json" />
+            </label>
+            <button class="text-button text-button--danger" id="resetContent" type="button">Restore defaults</button>
+          </div>
+          <div class="studio-footer__primary">
+            <button class="button button--ghost" type="button" data-close-editor>Cancel</button>
+            <button class="button button--primary" id="saveContent" type="button">Save to this device</button>
+          </div>
+        </footer>
+      </div>
+    </dialog>
+
+    <div class="toast-region" id="toastRegion" role="status" aria-live="polite"></div>
+
+    <template id="imageFieldTemplate">
+      <div class="image-editor">
+        <img alt="Current preview" />
+        <div>
+          <label class="upload-button">
+            Replace image
+            <input type="file" accept="image/png,image/jpeg,image/webp,image/gif" />
+          </label>
+          <small>PNG, JPG, WebP or GIF · max 6 MB</small>
+        </div>
+      </div>
+    </template>
+
+    <script src="content.js"></script>
+    <script src="app.js"></script>
+    <script src="studio.js"></script>
+  </body>
+</html>
