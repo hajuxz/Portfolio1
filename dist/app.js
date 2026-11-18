@@ -59,11 +59,10 @@ function render(content) {
   const initials = [words[0]?.[0], words.length > 1 ? words.at(-1)[0] : ""].join("").toUpperCase();
   for (const id of ["railInitials","mobileInitials","signatureInitials"]) byId(id).textContent = initials;
   byId("footerMark").replaceChildren(initials, node("span","",".")); 
-  byId("heroName").replaceChildren(words.slice(0,-1).join(" "), ...(words.length > 1 ? [node("br")] : []), words.at(-1), node("span","",".")); 
+  byId("heroName").textContent = words.join(" ");
   document.title = (p.name || "My portfolio") + " — Portfolio";
   const values = {heroAvailability:p.availability, heroEyebrow:p.eyebrow, heroHeadline:p.headline, heroLocation:p.location, aboutTitle:p.aboutTitle, aboutIntro:p.aboutIntro, aboutBio:p.bio, contactIntro:content.contact.intro, footerNote:p.footer, footerName:p.name, footerYear:new Date().getFullYear()};
   Object.entries(values).forEach(([id,value]) => byId(id).textContent = value);
-  document.querySelector(".portrait-frame__caption span").replaceChildren(node("i"),p.availability);
   const portrait = byId("profilePortrait");
   if (portrait.getAttribute("src") !== p.portrait) portrait.src = p.portrait;
   portrait.alt = p.alt;

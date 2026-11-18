@@ -63,6 +63,23 @@ try {
   await cmd("Runtime.enable");
   await cmd("Page.navigate",{url:origin+"/#admin="+owner});
   await until(()=>evaluate('document.querySelector("#studioDialog")?.open'));
+  for (const width of [320,390,768,1024,1536]) {
+    await cmd("Emulation.setDeviceMetricsOverride",{width,height:864,deviceScaleFactor:1,mobile:false});
+    const layout = await evaluate(`(() => {
+      const title = document.getElementById("heroName");
+      const text = title.firstChild;
+      const intactWords = [...text.data.matchAll(/\\S+/g)].every(word => {
+        const range = document.createRange();
+        range.setStart(text,word.index);
+        range.setEnd(text,word.index + word[0].length);
+        return range.getClientRects().length === 1;
+      });
+      const portrait = document.getElementById("profilePortrait").getBoundingClientRect();
+      return {intactWords,size:parseFloat(getComputedStyle(title).fontSize),width:portrait.width,height:portrait.height};
+    })()`);
+    assert.ok(layout.intactWords && layout.size <= 43,"Name size or wrapping at "+width);
+    assert.ok(layout.width > 0 && layout.width <= (width < 680 ? 96 : 176) && layout.height <= 220,"Portrait size at "+width);
+  }
   await evaluate('document.querySelector("[data-editor-tab=journey]").click()');
   assert.equal(await evaluate('document.querySelectorAll("#collection-certificates details").length'),3);
   await evaluate('const issuer=document.querySelectorAll("#collection-certificates .repeat-fields input")[1]; issuer.value="Certificate QA"; issuer.dispatchEvent(new Event("input")); document.querySelector("[data-editor-tab=profile]").click()');
