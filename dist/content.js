@@ -1,9 +1,15 @@
 /* The same schema is used by the editor, JSON backups and the publishing server. */
 (() => {
+  const certificateDirectory = "assets/certificates/";
+  const certificateLibrary = [
+    {title:"Introduction to AI Literacy and Responsible Use", file:"ai-literacy.png", preview:"ai-literacy.png", format:"PNG"},
+    {title:"CCNA: Switching, Routing, and Wireless Essentials", file:"switching-routing-wireless.pdf", preview:"switching-routing-wireless.jpg", format:"PDF"},
+    {title:"CCNA: Introduction to Networks", file:"introduction-to-networks.pdf", preview:"introduction-to-networks.jpg", format:"PDF"}
+  ].map(record => ({...record, file:certificateDirectory+record.file, preview:certificateDirectory+record.preview}));
   const defaults = {
     version: 1,
     profile: {
-      name: "Alex Reyes", eyebrow: "Independent designer & developer",
+      name: "Christian Rey Adolfo", eyebrow: "Independent designer & developer",
       headline: "I design interfaces and build the systems behind them, from the first sketch to the final release.",
       roles: "web applications, design systems, digital products", location: "Philippines",
       availability: "Available for select projects", resume: "",
@@ -32,6 +38,11 @@
       {title: "Development", description: "Building responsive experiences for the browser.", items: "JavaScript, HTML, CSS, React, Git"},
       {title: "Data & systems", description: "Structuring information and making patterns legible.", items: "SQL, Data modeling, API design, Charts"}
     ],
+    certificates: [
+      {title:certificateLibrary[0].title,issuer:"Mapúa University · CHED ACHIEVE",date:"14 September 2026",document:certificateLibrary[0].file},
+      {title:certificateLibrary[1].title,issuer:"Bukidnon State University · Cisco Networking Academy",date:"23 December 2025",document:certificateLibrary[1].file},
+      {title:certificateLibrary[2].title,issuer:"Bukidnon State University · Cisco Networking Academy",date:"16 May 2025",document:certificateLibrary[2].file}
+    ],
     journey: [
       {date: "Now", title: "Independent practice", organization: "Design & development", description: "Exploring how small teams can build maintainable digital tools.", type: "Practice"},
       {date: "Previously", title: "Learning by building", organization: "Personal studies", description: "Turning sketches into working prototypes and documenting the decisions along the way.", type: "Learning"}
@@ -51,6 +62,8 @@
   const assetNames = new Set([defaults.profile.portrait, ...defaults.projects.map(p => p.image)]);
   function validate(value) {
     function check(item, template, path) {
+      // Portfolios saved before certificates existed inherit the supplied documents.
+      if (path === "certificates" && item === undefined) return copy(defaults.certificates);
       if (Array.isArray(template)) {
         if (!Array.isArray(item) || item.length > 80) throw Error("Invalid collection: " + path);
         return item.map((row, index) => check(row, template[0], path + "." + index));
@@ -71,6 +84,7 @@
         throw Error("Please upload a supported image for " + path);
       }
       if (item.length > 5000) throw Error("Please shorten " + path);
+      if (key === "document" && !certificateLibrary.some(c => c.file === item) && !safeURL(item)) throw Error("Select an original certificate or enter its full web address.");
       if (["resume","url","github","linkedin","website"].includes(key) && item && !safeURL(item)) throw Error("Enter a full web address for " + path);
       if (key === "email" && item && !/^[^\s@?&#:]+@[^\s@?&#:]+\.[^\s@?&#:]+$/.test(item)) throw Error("Please check the contact email address.");
       if (["accent","secondary"].includes(key) && !/^#[a-f\d]{6}$/i.test(item)) throw Error("Choose a valid color.");
@@ -79,5 +93,5 @@
     }
     return check(value, defaults, "");
   }
-  globalThis.PortfolioContent = {defaults, copy, safeURL, validate};
+  globalThis.PortfolioContent = {defaults, copy, safeURL, validate, certificateLibrary};
 })();

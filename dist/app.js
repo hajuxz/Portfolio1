@@ -105,6 +105,28 @@ function render(content) {
     card.append(node("span","timeline-item__date",j.date),body,node("span","timeline-item__type",j.type));
     return card;
   }));
+  byId("certificates").hidden = content.certificates.length === 0;
+  fill("certificateList",content.certificates.map(c => {
+    const original = PortfolioContent.certificateLibrary.find(asset => asset.file === c.document);
+    const link = node("a","certificate-card");
+    const url = original?.file || safeURL(c.document);
+    if (url) link.href = url;
+    link.target = "_blank";
+    link.rel = "noopener noreferrer";
+    link.setAttribute("aria-label","Open "+c.title+" in a new tab");
+    if (original) {
+      const preview = node("img","certificate-preview");
+      preview.src = original.preview;
+      preview.alt = "";
+      preview.loading = "lazy";
+      link.append(preview);
+    }
+    const caption = node("div","certificate-caption");
+    caption.append(node("p","certificate-date",c.date),node("h4","",c.title),node("p","certificate-issuer",c.issuer),
+      node("span","certificate-action","View certificate"+(original ? " · "+original.format : "")+" ↗"));
+    link.append(caption);
+    return link;
+  }));
   const contact = content.contact;
   byId("contactEmail").textContent = contact.email || "Contact address coming soon";
   byId("contactEmail").removeAttribute("href");
@@ -170,6 +192,7 @@ function toggleTheme() {
 const commands = [
   ...[["home","Home"],["about","About & services"],["work","Selected work"],["skills","Skills"],["journey","Journey"],["contact","Contact"]]
     .map(([id,label])=>({label,icon:"↗",action:()=>{ location.hash = id; byId(id).scrollIntoView(); }})),
+  {label:"Certificates of completion",icon:"↗",action:()=>{location.hash = "certificates"; byId("certificates").scrollIntoView();}},
   {label:"Switch light / dark theme",icon:"◐",action:toggleTheme}
 ];
 function renderCommands() {

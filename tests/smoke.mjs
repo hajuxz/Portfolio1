@@ -25,6 +25,13 @@ try {
   await until(async()=>(await fetch(origin)).ok);
   const initial = await fetch(origin+"/api/portfolio"), first = await initial.json();
   assert.equal(first.canPublish,false);
+  assert.equal(first.content.certificates.length,3);
+  for (const certificate of first.content.certificates) {
+    const response = await fetch(origin+"/"+certificate.document);
+    assert.equal(response.status,200);
+    const bytes = await response.arrayBuffer();
+    assert.deepEqual(Buffer.from(bytes),await readFile(new URL("../dist/"+certificate.document,import.meta.url)));
+  }
   assert.equal((await fetch(origin+"/api/portfolio",{method:"PUT",body:"{}"})).status,403);
   console.log("Visitor API and owner-only write check passed.");
   const debuggingPort = port+11000;
@@ -56,6 +63,9 @@ try {
   await cmd("Runtime.enable");
   await cmd("Page.navigate",{url:origin+"/#admin="+owner});
   await until(()=>evaluate('document.querySelector("#studioDialog")?.open'));
+  await evaluate('document.querySelector("[data-editor-tab=journey]").click()');
+  assert.equal(await evaluate('document.querySelectorAll("#collection-certificates details").length'),3);
+  await evaluate('const issuer=document.querySelectorAll("#collection-certificates .repeat-fields input")[1]; issuer.value="Certificate QA"; issuer.dispatchEvent(new Event("input")); document.querySelector("[data-editor-tab=profile]").click()');
   await evaluate('const nameField=document.querySelector("#editor-profile input"); nameField.value="Portfolio QA"; nameField.dispatchEvent(new Event("input"));');
   await evaluate(`const imgInput=document.querySelector("#editor-profile input[type=file]"); const c=document.createElement("canvas"); c.width=c.height=4; const blob=await new Promise(r=>c.toBlob(r)); const files=new DataTransfer(); files.items.add(new File([blob],"sample.png",{type:"image/png"})); imgInput.files=files.files; imgInput.dispatchEvent(new Event("change"));`.replace("const imgInput","(async()=>{const imgInput")+"})()");
   await until(()=>evaluate('document.getElementById("profilePortrait").src.startsWith("data:image/jpeg")'));
@@ -64,6 +74,7 @@ try {
   await cmd("Page.reload");
   await until(()=>evaluate('document.body.classList.contains("ready") && document.title.startsWith("Portfolio QA")'));
   assert.ok(await evaluate('document.getElementById("profilePortrait").src.startsWith("data:image/jpeg")'));
+  assert.equal(await evaluate('document.querySelector(".certificate-issuer").textContent'),"Certificate QA");
   assert.equal((await (await fetch(origin+"/api/portfolio")).json()).content.profile.name,"Portfolio QA");
   assert.equal(JSON.parse(await readFile(path.join(temp,"portfolio.json"),"utf8")).profile.name,"Portfolio QA");
   await evaluate('document.querySelectorAll(".filter-button")[1].click(); document.querySelector(".project-open").click()');

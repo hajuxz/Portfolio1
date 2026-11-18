@@ -1972,6 +1972,18 @@ html[data-theme="dark"] .editor-field select { color: var(--ink); background: va
 }
 
 [hidden] { display: none !important; }
+.certificate-section { margin-top: clamp(3rem,7vw,6rem); scroll-margin-top: 5rem; }
+.certificate-section h3 { margin: 0 0 1.4rem; font: 750 clamp(1.65rem,3vw,2.6rem)/1.1 var(--font-display); letter-spacing: -.04em; }
+.certificate-grid { display: grid; grid-template-columns: repeat(auto-fit,minmax(min(245px,100%),1fr)); gap: 16px; }
+.certificate-card { display: flex; flex-direction: column; overflow: hidden; background: var(--surface); border: 1px solid var(--line); border-radius: 18px; transition: transform 200ms, border-color 200ms; }
+.certificate-card:hover, .certificate-card:focus-visible { transform: translateY(-3px); border-color: var(--accent); }
+.certificate-preview { width: 100%; aspect-ratio: 1.5; object-fit: contain; padding: 10px; background: #fff; border-bottom: 1px solid var(--line); }
+.certificate-caption { display: flex; flex: 1; flex-direction: column; padding: 20px; gap: 8px; }
+.certificate-caption h4, .certificate-caption p { margin: 0; }
+.certificate-caption h4 { font-size: 1.15rem; line-height: 1.25; }
+.certificate-date { color: var(--muted); font: .75rem/1.5 var(--font-mono); }
+.certificate-issuer { color: var(--muted); font-size: .9rem; }
+.certificate-action { margin-top: auto; padding-top: 12px; font-weight: 700; font-size: .86rem; }
 body:not(.ready) [data-open-editor] { visibility: hidden; }
 .interests-panel { margin-top: 3.5rem; }
 .interests-panel h3 { font-family: var(--font-display); font-size: 1.85rem; letter-spacing: -.04em; }

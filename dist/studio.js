@@ -1,18 +1,20 @@
 "use strict";
 let draft = null, dirty = false, busy = false, tab = "profile";
 const fieldNames = {
+  issuer:"Issuing organization", document:"Original certificate",
   name:"Display name", eyebrow:"Professional title", headline:"Introduction", roles:"Rotating specialties (comma separated)", location:"Based in", availability:"Availability",
   resume:"Résumé URL", alt:"Image description", aboutTitle:"About heading", aboutIntro:"About introduction", bio:"Biography", footer:"Footer note",
   title:"Title", description:"Description", category:"Category", year:"Date or study label", summary:"Short description", detail:"Case study", highlights:"Design decisions (one per line)", tags:"Tags (comma separated)", url:"Project URL",
   items:"Skills (comma separated)", organization:"Organization or focus", date:"Date", type:"Milestone type", email:"Contact email", intro:"Contact introduction", github:"GitHub URL", linkedin:"LinkedIn URL", website:"Website URL", accent:"Primary color", secondary:"Secondary color"
 };
 const groups = {
+  certificates:["title","issuer","date","document"],
   profile:["name","eyebrow","headline","roles","location","availability","resume","portrait","alt","aboutTitle","aboutIntro","bio","footer"],
   services:["title","description"], interests:["title","description"], projects:["title","category","year","image","alt","summary","detail","highlights","tags","url"],
   skills:["title","description","items"], journey:["title","date","organization","description","type"],
   contact:["email","intro","github","linkedin","website"], appearance:["accent","secondary"]
 };
-const plural = {services:"service",interests:"interest",projects:"project",skills:"skill group",journey:"milestone"};
+const plural = {services:"service",interests:"interest",projects:"project",skills:"skill group",journey:"milestone",certificates:"certificate"};
 const editor = byId("studioDialog");
 function markChanged() {
   dirty = true;
@@ -48,6 +50,25 @@ async function compressImage(file) {
   } finally { URL.revokeObjectURL(src); }
 }
 function addField(owner, field) {
+  if (field === "document") {
+    const wrapper = node("div","editor-field"), label = node("label","editor-field"), select = node("select");
+    const library = PortfolioContent.certificateLibrary;
+    library.forEach(cert => select.add(new Option(cert.title,cert.file)));
+    select.add(new Option("Link to another certificate","external"));
+    select.value = library.some(c=>c.file === owner.document) ? owner.document : "external";
+    label.append(node("span","",fieldNames.document),select);
+    const urlLabel = node("label","editor-field"), input = node("input");
+    input.type = "url"; input.placeholder = "https://…"; input.value = safeURL(owner.document);
+    urlLabel.append(node("span","","Certificate URL"),input);
+    urlLabel.hidden = select.value !== "external";
+    select.onchange = () => {
+      urlLabel.hidden = select.value !== "external";
+      owner.document = urlLabel.hidden ? select.value : input.value.trim();
+      markChanged();
+    };
+    input.oninput = ()=>{owner.document = input.value.trim(); markChanged();};
+    wrapper.append(label,urlLabel); return wrapper;
+  }
   if (field === "image" || field === "portrait") {
     const container = byId("imageFieldTemplate").content.firstElementChild.cloneNode(true);
     const preview = container.querySelector("img"), input = container.querySelector("input");
@@ -131,7 +152,8 @@ function rebuild() {
     panel.replaceChildren();
   });
   const panel = byId("editor-"+tab);
-  if (plural[tab]) panel.append(repeatGroup(tab));
+  if (tab === "journey") panel.append(repeatGroup("journey"),repeatGroup("certificates"));
+  else if (plural[tab]) panel.append(repeatGroup(tab));
   else {
     const wrapper = section(({profile:"Profile & introduction",contact:"Contact details",appearance:"Portfolio colors"})[tab]);
     groups[tab].forEach(f=>wrapper.append(addField(draft[tab],f)));

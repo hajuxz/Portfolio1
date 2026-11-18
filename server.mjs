@@ -5,15 +5,15 @@ import path from "node:path";
 import {randomBytes, createHash, timingSafeEqual} from "node:crypto";
 import "./dist/content.js";
 
-const {defaults, validate} = globalThis.PortfolioContent;
+const {defaults, validate, certificateLibrary} = globalThis.PortfolioContent;
 const port = Number(process.env.PORT || 4173);
 const secret = process.env.PORTFOLIO_ADMIN_TOKEN || randomBytes(32).toString("hex");
 const root = new URL("./dist/",import.meta.url);
 const stateDir = process.env.PORTFOLIO_DATA_DIR ? pathToFileURL(path.resolve(process.env.PORTFOLIO_DATA_DIR)+path.sep) : new URL("./.local/",import.meta.url);
 const stateFile = new URL("portfolio.json",stateDir);
 const limit = 12*1024*1024;
-const mime = {html:"text/html",css:"text/css",js:"text/javascript",svg:"image/svg+xml"};
-const staticFiles = new Set(["index.html","styles.css","app.js","studio.js","content.js",defaults.profile.portrait,...defaults.projects.map(p=>p.image)]);
+const mime = {html:"text/html",css:"text/css",js:"text/javascript",svg:"image/svg+xml",pdf:"application/pdf",png:"image/png",jpg:"image/jpeg"};
+const staticFiles = new Set(["index.html","styles.css","app.js","studio.js","content.js",defaults.profile.portrait,...defaults.projects.map(p=>p.image),...certificateLibrary.flatMap(c=>[c.file,c.preview])]);
 const hash = value => '"'+createHash("sha256").update(JSON.stringify(value)).digest("hex")+'"';
 let content;
 try { content = validate(JSON.parse(await readFile(stateFile,"utf8"))); }
@@ -65,7 +65,8 @@ const server = http.createServer(async(req,res)=>{
     if (req.method !== "GET" && req.method !== "HEAD") return send(405);
     const name = url.pathname === "/" ? "index.html" : url.pathname.slice(1);
     if (!staticFiles.has(name)) return send(404);
-    res.setHeader("Content-Type",mime[name.split(".").at(-1)]+"; charset=utf-8");
+    const type = mime[name.split(".").at(-1)];
+    res.setHeader("Content-Type",type.startsWith("text/") ? type+"; charset=utf-8" : type);
     return send(200,req.method === "HEAD" ? "" : await readFile(new URL(name,root)));
   } catch { return send(500); }
 });

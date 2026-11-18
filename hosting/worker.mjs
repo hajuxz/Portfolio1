@@ -5,7 +5,8 @@ export default {
     if (url.pathname !== "/api/portfolio") {
       const asset = files[url.pathname === "/" ? "/index.html" : url.pathname];
       if (!asset || !["GET","HEAD"].includes(request.method)) return new Response(null,{status:404});
-      return new Response(request.method === "HEAD" ? null : asset.text,{headers:{"Content-Type":asset.mime+"; charset=utf-8","X-Content-Type-Options":"nosniff"}});
+      const body = request.method === "HEAD" ? null : asset.base64 ? Uint8Array.from(atob(asset.base64),c=>c.charCodeAt(0)) : asset.text;
+      return new Response(body,{headers:{"Content-Type":asset.base64 ? asset.mime : asset.mime+"; charset=utf-8","X-Content-Type-Options":"nosniff"}});
     }
     const headers = {"Content-Type":"application/json","Cache-Control":"no-store","X-Portfolio-Server":"1"};
     const reply = (status,value=null) => new Response(value === null ? null : JSON.stringify(value),{status,headers});

@@ -1,11 +1,15 @@
 import {mkdir,readFile,writeFile} from "node:fs/promises";
 import "../dist/content.js";
-const {defaults} = globalThis.PortfolioContent;
+const {defaults,certificateLibrary} = globalThis.PortfolioContent;
 const root = new URL("../dist/",import.meta.url);
 const files = {};
 const mime = {html:"text/html",css:"text/css",js:"text/javascript",svg:"image/svg+xml"};
 for (const file of ["index.html","styles.css","content.js","app.js","studio.js",defaults.profile.portrait,...defaults.projects.map(p=>p.image)]) {
   files["/"+file] = {mime:mime[file.split(".").at(-1)],text: await readFile(new URL(file,root),"utf8")};
+}
+const binaryTypes = {pdf:"application/pdf",jpg:"image/jpeg",png:"image/png"};
+for (const file of new Set(certificateLibrary.flatMap(c=>[c.file,c.preview]))) {
+  files["/"+file] = {mime:binaryTypes[file.split(".").at(-1)],base64:(await readFile(new URL(file,root))).toString("base64")};
 }
 const worker = await readFile(new URL("worker.mjs",import.meta.url),"utf8");
 await mkdir(new URL("server/",root),{recursive:true});
