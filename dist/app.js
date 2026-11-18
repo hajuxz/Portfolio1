@@ -16,7 +16,7 @@ const button = (className, label, action) => {
 };
 const list = (value, delimiter = ",") => value.split(delimiter).map(s => s.trim()).filter(Boolean);
 const key = "orbitfolio.content.v1";
-let saved = copy(defaults), current = saved, filter = "", roleIndex = 0;
+let saved = copy(defaults), current = saved, filter = "";
 let serverMode = false, canPublish = false, revision = "", adminToken = "";
 const reduced = matchMedia("(prefers-reduced-motion: reduce)");
 function toast(message, error = false) {
@@ -62,16 +62,18 @@ function render(content) {
   const initials = [words[0]?.[0], words.length > 1 ? words.at(-1)[0] : ""].join("").toUpperCase();
   for (const id of ["railInitials","mobileInitials","signatureInitials"]) byId(id).textContent = initials;
   byId("footerMark").replaceChildren(initials, node("span","",".")); 
-  byId("heroName").textContent = words.join(" ");
+  const surname = words.at(-1);
+  const nameLines = [words.slice(0,-1).join(" "), surname].filter(Boolean);
+  byId("heroName").replaceChildren(...nameLines.map(line => node("span","",line)));
+  byId("heroName").setAttribute("aria-label", p.name);
   document.title = (p.name || "My portfolio") + " — Portfolio";
-  const values = {heroAvailability:p.availability, heroEyebrow:p.eyebrow, heroHeadline:p.headline, heroLocation:p.location, aboutTitle:p.aboutTitle, aboutIntro:p.aboutIntro, aboutBio:p.bio, contactIntro:content.contact.intro, footerNote:p.footer, footerName:p.name, footerYear:new Date().getFullYear()};
+  document.querySelector('meta[name="description"]').content = p.headline;
+  const values = {heroAvailability:p.availability, heroEducation:p.eyebrow, heroFocus:p.roles, heroLocation:p.location, aboutTitle:p.aboutTitle, aboutIntro:p.aboutIntro, aboutBio:p.bio, contactIntro:content.contact.intro, footerNote:p.footer, footerName:p.name, footerYear:new Date().getFullYear()};
   Object.entries(values).forEach(([id,value]) => byId(id).textContent = value);
   portraitSwitch.setSources(p);
   const resume = byId("resumeLink");
-  resume.textContent = safeURL(p.resume) ? "View résumé ↗" : "Get in touch ↗";
-  resume.href = safeURL(p.resume) || "#contact";
-  resume.target = safeURL(p.resume) ? "_blank" : "_self";
-  resume.rel = "noopener noreferrer";
+  resume.hidden = !safeURL(p.resume);
+  if (resume.hidden) resume.removeAttribute("href"); else resume.href = p.resume;
   for (const [field, variable] of [["accent","--accent"],["secondary","--accent-2"]]) {
     const color = content.appearance[field];
     if (!usesThemePalette(content.appearance) && /^#[a-f\d]{6}$/i.test(color)) {
@@ -138,7 +140,6 @@ function render(content) {
   byId("contactForm").querySelector("button").disabled = !contact.email;
   byId("contactForm").querySelector(".form-note").textContent = contact.email ? "Your email app opens with a draft for you to review and send." : "Email inquiries open once a contact address is added.";
   fill("socialList",[["GitHub",contact.github],["LinkedIn",contact.linkedin],["Website",contact.website]].filter(([,url])=>safeURL(url)).map(([label,url])=>external(label+" ↗",url)));
-  showRole();
 }
 function renderProjects() {
   const categories = [...new Set(current.projects.map(p => p.category).filter(Boolean))];
@@ -204,10 +205,6 @@ function openProject(p) {
   fill("projectDialogContent",[hero,body]);
   byId("projectDialog").showModal();
 }
-function showRole() {
-  const roles = list(current.profile.roles);
-  byId("rotatingRole").textContent = roles[roleIndex % roles.length] || "digital products";
-}
 function toggleTheme() {
   const theme = document.documentElement.dataset.theme === "dark" ? "light" : "dark";
   document.documentElement.dataset.theme = theme;
@@ -268,6 +265,7 @@ byId("contactForm").onsubmit = e=>{
   location.href = "mailto:"+encodeURIComponent(current.contact.email)+"?subject="+encodeURIComponent(form.get("subject"))+"&body="+encodeURIComponent(body);
 };
 function updateNavigation() {
+  document.body.classList.toggle("at-hero", byId("home").getBoundingClientRect().bottom > 70);
   const marker = innerHeight * 0.4;
   const section = all("[data-section]").filter(s=>s.getBoundingClientRect().top <= marker).at(-1)?.id || "home";
   all("[data-nav]").forEach(a=>{
@@ -287,5 +285,4 @@ function updateClock() {
   byId("localTime").textContent = new Intl.DateTimeFormat("en-PH",{hour:"numeric",minute:"2-digit", timeZone:"Asia/Manila"}).format(new Date())+" PHT";
 }
 updateClock(); setInterval(updateClock,30000);
-setInterval(()=>{ if (!reduced.matches && !document.hidden) { roleIndex++; showRole(); } },4800);
 updateNavigation();

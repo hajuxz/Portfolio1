@@ -7,13 +7,13 @@
     {title:"CCNA: Introduction to Networks", file:"introduction-to-networks.pdf", preview:"introduction-to-networks.jpg", format:"PDF"}
   ].map(record => ({...record, file:certificateDirectory+record.file, preview:certificateDirectory+record.preview}));
   const defaults = {
-    version: 1,
+    version: 2,
     profile: {
-      name: "Christian Rey Adolfo", eyebrow: "Independent designer & developer",
+      name: "Christian Rey Adolfo", eyebrow: "IT Student at Bukidnon State University",
       headline: "I design interfaces and build the systems behind them, from the first sketch to the final release.",
-      roles: "web applications, design systems, digital products", location: "Philippines",
+      roles: "Web Development, Full-Stack and UI/UX", location: "Bukidnon, Philippines",
       availability: "Available for select projects", resume: "",
-      portrait: "assets/portrait-photo.webp", auraPortrait: "assets/portrait-aura.webp", alt: "Portrait of Christian Rey Adolfo",
+      portrait: "assets/portrait-normal.jpg", auraPortrait: "assets/portrait-aura.jpg", alt: "Portrait of Christian Rey Adolfo",
       aboutTitle: "About my practice.", aboutIntro: "I work across interface design, front-end development and data visualization.",
       bio: "I start with the people who will use a product. A conversation, a paper sketch and a working prototype usually teach me more than a long brief.",
       footer: "Independent design & development"
@@ -59,9 +59,19 @@
       return ["https:", "http:"].includes(parsed.protocol) && !parsed.username && !parsed.password ? parsed.href : "";
     } catch { return ""; }
   };
-  const assetNames = new Set([defaults.profile.portrait, defaults.profile.auraPortrait, "assets/portrait-placeholder.svg", ...defaults.projects.map(p => p.image)]);
+  const previousProfile = {
+    portrait: "assets/portrait-photo.webp", auraPortrait: "assets/portrait-aura.webp",
+    location: "Philippines", eyebrow: "Independent designer & developer", roles: "web applications, design systems, digital products"
+  };
+  const assetNames = new Set([defaults.profile.portrait, defaults.profile.auraPortrait, previousProfile.portrait, previousProfile.auraPortrait, "assets/portrait-placeholder.svg", ...defaults.projects.map(p => p.image)]);
   function validate(value) {
     function check(item, template, path) {
+      if (path === "profile" && value.version === 1 && item && typeof item === "object") {
+        item = {...item};
+        for (const [field, previous] of Object.entries(previousProfile)) {
+          if (item[field] === previous) item[field] = defaults.profile[field];
+        }
+      }
       if (path === "profile.auraPortrait" && item === undefined) return defaults.profile.auraPortrait;
       if (path === "profile.portrait" && item === "assets/portrait-placeholder.svg") return defaults.profile.portrait;
       if (path === "profile.alt" && item === "Illustrated studio portrait") return "Portrait of " + value.profile.name;
@@ -77,8 +87,8 @@
           [key, check(item[key], sample, path ? path + "." + key : key)]));
       }
       if (path === "version") {
-        if (item !== 1) throw Error("This file uses an unsupported portfolio version.");
-        return item;
+        if (item !== 1 && item !== defaults.version) throw Error("This file uses an unsupported portfolio version.");
+        return defaults.version;
       }
       if (typeof item !== "string") throw Error("Expected text for " + path);
       const key = path.split(".").pop();

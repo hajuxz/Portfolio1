@@ -2,7 +2,7 @@
 let draft = null, dirty = false, busy = false, tab = "profile";
 const fieldNames = {
   issuer:"Issuing organization", document:"Original certificate",
-  name:"Display name", eyebrow:"Professional title", headline:"Introduction", roles:"Rotating specialties (comma separated)", location:"Based in", availability:"Availability",
+  name:"Display name", eyebrow:"Education", headline:"Page description", roles:"Focus areas", location:"Based in", availability:"Availability",
   resume:"Résumé URL", alt:"Image description", aboutTitle:"About heading", aboutIntro:"About introduction", bio:"Biography", footer:"Footer note",
   title:"Title", description:"Description", category:"Category", year:"Date or study label", summary:"Short description", detail:"Case study", highlights:"Design decisions (one per line)", tags:"Tags (comma separated)", url:"Project URL",
   items:"Skills (comma separated)", organization:"Organization or focus", date:"Date", type:"Milestone type", email:"Contact email", intro:"Contact introduction", github:"GitHub URL", linkedin:"LinkedIn URL", website:"Website URL", accent:"Primary color", secondary:"Secondary color"

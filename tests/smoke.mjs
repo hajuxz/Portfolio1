@@ -90,6 +90,10 @@ try {
   await until(async()=>await label() === "Show Aura");
   await delay(1300);
   assert.ok(await evaluate('getComputedStyle(document.getElementById("auraPortrait")).visibility === "hidden" && getComputedStyle(document.querySelector(".portrait-sweep")).visibility === "hidden"'));
+  await evaluate('scrollTo({top:document.getElementById("home").offsetHeight / 2,behavior:"instant"})');
+  await until(()=>evaluate('Number(getComputedStyle(document.querySelector(".intro-shade")).opacity) > .4 && Number(getComputedStyle(document.querySelector(".intro-shade")).opacity) < .6'));
+  await evaluate(`document.querySelector('.intro-nav a[href="#about"]').click()`);
+  await until(()=>evaluate('document.getElementById("about").getBoundingClientRect().top < 120'));
   console.log("Automatic portrait reveal, registered ribbon and mask, reverse scan and stable endpoints passed.");
   await cmd("Page.navigate",{url:origin+"/?editor#admin="+owner});
   await until(()=>evaluate('document.querySelector("#studioDialog")?.open'));
@@ -97,18 +101,19 @@ try {
     await cmd("Emulation.setDeviceMetricsOverride",{width,height:864,deviceScaleFactor:1,mobile:false});
     const layout = await evaluate(`(() => {
       const title = document.getElementById("heroName");
-      const text = title.firstChild;
-      const intactWords = [...text.data.matchAll(/\\S+/g)].every(word => {
-        const range = document.createRange();
-        range.setStart(text,word.index);
-        range.setEnd(text,word.index + word[0].length);
-        return range.getClientRects().length === 1;
+      const lines = [...title.children].map(line => {
+        const range = document.createRange(); range.selectNodeContents(line);
+        return range.getClientRects().length === 1 ? line.textContent : "wrapped";
       });
       const portrait = document.getElementById("profilePortrait").getBoundingClientRect();
-      return {intactWords,size:parseFloat(getComputedStyle(title).fontSize),width:portrait.width,height:portrait.height};
+      const button = document.getElementById("portraitToggle").getBoundingClientRect();
+      const separate = button.right <= portrait.left || button.left >= portrait.right || button.top >= portrait.bottom || button.bottom <= portrait.top;
+      return {lines, separate, mobileStack:title.getBoundingClientRect().bottom <= portrait.top,
+        pageHeight:document.getElementById("home").offsetHeight, size:parseFloat(getComputedStyle(title).fontSize),width:portrait.width,height:portrait.height};
     })()`);
-    assert.ok(layout.intactWords && layout.size <= 43,"Name size or wrapping at "+width);
-    assert.ok(layout.width > 0 && layout.width <= (width < 680 ? 96 : 176) && layout.height <= 220,"Portrait size at "+width);
+    assert.deepEqual(layout.lines,["Christian Rey","Adolfo"],"Two-line name at "+width);
+    assert.ok(layout.size >= 50 && layout.separate && layout.pageHeight >= 863,"Full-height hero and separate control at "+width);
+    assert.ok(layout.width === layout.height && (width <= 820 ? layout.mobileStack : layout.height > 600),"Portrait scale and position at "+width);
   }
   await evaluate('document.querySelector("[data-editor-tab=journey]").click()');
   assert.equal(await evaluate('document.querySelectorAll("#collection-certificates details").length'),3);
