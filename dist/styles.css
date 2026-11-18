@@ -1797,9 +1797,6 @@ main { margin-left: 0; }
 .hero .eyebrow::before { display: none; }
 .hero__actions .button { min-height: 44px; padding-inline: 16px; border-radius: 5px; font-weight: 700; }
 .hero__visual { position: relative; isolation: isolate; }
-#auraPortrait, .portrait-sweep { visibility: hidden; }
-.portrait-sweep { position: absolute; inset: 0; pointer-events: none; }
-.portrait-ribbon { position: absolute; top: 0; left: -25%; width: 32%; max-width: none; height: 100%; }
 .portrait-toggle {
   position: absolute; bottom: 5px; left: 5px; display: inline-flex; align-items: center; gap: 6px;
   min-height: 38px; padding: 5px 9px; border: 1px solid #68685c; border-radius: 5px;
@@ -1943,24 +1940,8 @@ body.at-hero :is(.signal-rail, .mobile-header, .mobile-nav, .noise) { visibility
 .intro-name span { display: block; overflow-wrap: anywhere; }
 .intro-details { display: grid; gap: 10px; padding: 0; margin: clamp(22px, 3.4vh, 38px) 0 0; list-style: none; }
 .intro-details li { display: flex; gap: 9px; align-items: center; color: var(--cover-muted); font-size: clamp(11px,.83vw,14px); letter-spacing: .055em; line-height: 1.45; text-transform: uppercase; }
-.intro-details svg, .intro-switch svg { fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+.intro-details svg { fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
 .intro-details svg { width: 14px; height: 14px; flex: none; color: #417f78; }
-.intro-portrait {
-  position: absolute; left: 61%; bottom: 0; transform: translateX(-50%);
-  width: min(66vw, 95svh); aspect-ratio: 1; pointer-events: none;
-}
-.intro-portrait > img { position: absolute; inset: 0; display: block; width: 100%; height: 100%; object-fit: contain; object-position: center; }
-.intro-switch {
-  position: absolute; z-index: 3; left: var(--gutter); bottom: clamp(22px,5vh,56px);
-  display: inline-flex; align-items: center; gap: 12px;
-  min-height: 44px; padding: 0; border: 0; color: var(--cover-ink); background: transparent; text-align: left; cursor: pointer;
-}
-.intro-switch-icon { display: grid; place-items: center; width: 43px; height: 43px; border: 1px solid #a6abb0; border-radius: 50%; }
-.intro-switch:hover .intro-switch-icon { border-color: var(--cover-ink); background: #f5f6f6; }
-.intro-switch svg { width: 17px; height: 17px; }
-.intro-switch strong, .intro-switch small { display: block; }
-.intro-switch strong { font-size: 11px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; }
-.intro-switch small { color: var(--cover-muted); font-size: 11px; }
 .intro-meta { z-index: 2; grid-column: 3; display: grid; gap: 18px; max-width: 170px; }
 .intro-meta > div { border-top: 1px solid #d9dddf; padding-top: 9px; }
 .intro-meta span { display: block; margin-bottom: 4px; font-size: 9px; text-transform: uppercase; letter-spacing: .16em; color: var(--cover-muted); }
@@ -1980,12 +1961,6 @@ body.at-hero :is(.signal-rail, .mobile-header, .mobile-nav, .noise) { visibility
   .intro-name { font-size: clamp(54px, 11vw, 86px); line-height: 1; }
   .intro-details { gap: 4px; margin-top: 16px; }
   .intro-details li { font-size: 10px; gap: 7px; }
-  .intro-portrait {
-    position: relative; left: auto; bottom: auto; transform: none;
-    grid-column: 1/-1; grid-row: 2; justify-self: center; align-self: center;
-    width: min(calc(100% + var(--gutter) * 2), 54svh, 560px);
-  }
-  .intro-switch { position: static; grid-row: 3; grid-column: 1; justify-self: start; gap: 8px; }
   .intro-meta { grid-column: 2; grid-row: 3; justify-self: end; grid-template-columns: repeat(2,minmax(0,auto)); gap: 8px 14px; max-width: 245px; }
   .intro-meta > div { padding-top: 5px; }
   .intro-meta strong { font-size: 10px; }
@@ -1994,7 +1969,6 @@ body.at-hero :is(.signal-rail, .mobile-header, .mobile-nav, .noise) { visibility
 }
 @media (max-width: 380px) {
   .intro-nav a { padding-inline: 9px; font-size: 11px; }
-  .intro-switch-icon { width: 34px; height: 34px; }
   .intro-meta { column-gap: 7px; }
 }
 @media print {

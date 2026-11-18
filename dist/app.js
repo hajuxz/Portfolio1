@@ -286,3 +286,13 @@ function updateClock() {
 }
 updateClock(); setInterval(updateClock,30000);
 updateNavigation();
+
+if (window.gsap && window.ScrollTrigger) {
+  gsap.registerPlugin(ScrollTrigger);
+  gsap.matchMedia().add("(prefers-reduced-motion: no-preference)", () => {
+    gsap.to(".intro-shade", {
+      opacity: 1, ease: "none",
+      scrollTrigger: {trigger: "#home", start: "top top", end: "bottom top", scrub: true}
+    });
+  });
+}

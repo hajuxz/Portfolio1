@@ -1,102 +1,118 @@
 "use strict";
+
+// Numbers are CSS pixels. Percentages scale with the shared portrait box.
+const PORTRAITS = {
+  normal: {src: "assets/portrait-normal.jpg", x: 0, y: 0, scale: 1},
+  aura:   {src: "assets/portrait-aura.jpg", x: "-1.375%", y: "-6.375%", scale: 1}
+};
+const EYES = {x: 49.875, y: 19.25}; // Midpoint of the normal pupils, in percent.
+
 const portraitSwitch = (() => {
   const frame = document.getElementById("portraitFrame");
-  const photo = document.getElementById("profilePortrait");
-  const aura = document.getElementById("auraPortrait");
-  const sweep = frame.querySelector(".portrait-sweep");
-  const ribbon = sweep.querySelector("img");
   const toggle = document.getElementById("portraitToggle");
-  const action = document.getElementById("portraitAction");
+  const label = document.getElementById("portraitAction");
+  const previousLabel = toggle.querySelector(".portrait-old-label");
   const motion = matchMedia("(prefers-reduced-motion: reduce)");
-  let description, showingAura = false, targetAura = false, timeline;
-  let generation = 0, ready = false, autoDue = false, autoUsed = false;
+  const layers = Object.fromEntries([...frame.querySelectorAll("[data-portrait]")].map(layer => [layer.dataset.portrait, layer]));
+  const length = value => typeof value === "number" ? value + "px" : value;
+  let active = "normal", description = frame.getAttribute("aria-label"), turns = 0;
+  let ready = false, autoDue = false, autoUsed = false, sourceVersion = 0, swapVersion = 0;
+
+  function align() {
+    for (const [key, layer] of Object.entries(layers)) {
+      const {x, y, scale} = PORTRAITS[key];
+      layer.style.setProperty("--x", length(x));
+      layer.style.setProperty("--y", length(y));
+      layer.style.setProperty("--scale", scale);
+    }
+    // The artwork scales about its base. Both transition layers zoom about the registered eyes.
+    const normal = PORTRAITS.normal;
+    frame.style.setProperty("--eye-x", `calc(${50 + (EYES.x - 50) * normal.scale}% + ${length(normal.x)})`);
+    frame.style.setProperty("--eye-y", `calc(${100 + (EYES.y - 100) * normal.scale}% + ${length(normal.y)})`);
+  }
+  align();
 
   function describe() {
-    frame.setAttribute("aria-label", showingAura ? description + " (chrome aura)" : description);
-    action.textContent = showingAura ? "Show Photo" : "Show Aura";
+    frame.setAttribute("aria-label", description + (active === "aura" ? " (chrome aura)" : ""));
+    label.textContent = active === "normal" ? "Show Aura" : "Show Normal";
+    toggle.setAttribute("aria-label", label.textContent + ". Switch portrait");
   }
 
-  function settle(next) {
-    timeline?.kill();
-    timeline = null;
-    showingAura = next;
-    photo.style.visibility = next ? "hidden" : "visible";
-    aura.style.visibility = next ? "visible" : "hidden";
-    for (const image of [photo, aura]) {
-      image.style.clipPath = "none";
-      image.style.opacity = "1";
-    }
-    sweep.style.visibility = "hidden";
-    toggle.removeAttribute("aria-disabled");
+  function settle() {
+    ++swapVersion;
+    frame.classList.remove("is-changing", "is-shining");
+    toggle.classList.remove("is-changing");
+    for (const [key, layer] of Object.entries(layers)) layer.dataset.state = key === active ? "shown" : "idle";
+    toggle.setAttribute("aria-disabled", String(frame.classList.contains("is-debug") || !ready));
     describe();
   }
 
-  function transition() {
-    if (!ready || timeline) return;
-    targetAura = !showingAura;
-    if (!window.gsap) { settle(targetAura); return; }
+  async function swap() {
+    if (!ready || frame.classList.contains("is-changing") || frame.classList.contains("is-debug")) return;
+    const version = ++swapVersion;
+    const outgoing = active;
+    active = active === "normal" ? "aura" : "normal";
+    previousLabel.textContent = label.textContent;
+    frame.classList.remove("is-shining");
+    frame.classList.add("is-changing");
+    toggle.classList.add("is-changing");
     toggle.setAttribute("aria-disabled", "true");
-    photo.style.visibility = aura.style.visibility = "visible";
-    timeline = gsap.timeline({paused: true, onComplete: () => settle(targetAura)});
-    if (motion.matches || !ribbon.naturalWidth) {
-      const fade = {duration: .2, ease: "sine.inOut"};
-      timeline.fromTo(photo, {opacity: showingAura ? 0 : 1}, {opacity: targetAura ? 0 : 1, ...fade}, 0)
-        .fromTo(aura, {opacity: showingAura ? 1 : 0}, {opacity: targetAura ? 1 : 0, ...fade}, 0);
-    } else {
-      // The strip's leading edge slopes left by 16% of the frame width from top to bottom.
-      const bounds = frame.getBoundingClientRect();
-      const right = Math.max(124, (document.documentElement.clientWidth - bounds.left) / bounds.width * 100 + 20);
-      const start = targetAura ? -8 : right, end = targetAura ? right : -8;
-      const mask = (x, edge) => `polygon(${edge}% 0%, ${x}% 0%, ${x - 16}% 100%, ${edge}% 100%)`;
-      const timing = {duration: 1.2, ease: "power2.inOut"};
-      sweep.style.visibility = "visible";
-      timeline.fromTo(aura, {clipPath: mask(start, 0)}, {clipPath: mask(end, 0), ...timing}, 0)
-        .fromTo(photo, {clipPath: mask(start, 100)}, {clipPath: mask(end, 100), ...timing}, 0)
-        .fromTo(sweep, {xPercent: start}, {xPercent: end, force3D: true, ...timing}, 0)
-        .fromTo(sweep, {opacity: 0}, {opacity: 1, duration: .12}, 0)
-        .to(sweep, {opacity: 0, duration: .1}, 1.1);
-    }
-    timeline.play();
+    toggle.style.setProperty("--turn", (++turns * 180) + "deg");
+    layers[outgoing].dataset.state = "leaving";
+    layers[active].dataset.state = "shown";
+    describe();
+
+    const fades = layers[active].getAnimations().filter(animation => animation.transitionProperty === "opacity");
+    await Promise.allSettled(fades.map(animation => animation.finished));
+    if (version !== swapVersion) return;
+    settle();
+    if (active === "aura" && !motion.matches) frame.classList.add("is-shining");
   }
 
+  toggle.addEventListener("click", () => { autoUsed = true; swap(); });
+  document.addEventListener("keydown", event => {
+    if (event.key.toLowerCase() !== "d" || event.repeat || event.isComposing || event.ctrlKey || event.metaKey || event.altKey) return;
+    if (event.target.isContentEditable || event.target.closest?.("input, textarea, select") || document.querySelector("dialog[open]")) return;
+    autoUsed = true;
+    frame.classList.toggle("is-debug");
+    settle();
+  });
+  motion.addEventListener("change", settle);
+
   function maybeAuto() {
-    if (autoDue && ready && !autoUsed) {
-      autoUsed = true;
-      transition();
-    }
+    if (ready && autoDue && !autoUsed) { autoUsed = true; swap(); }
   }
-  toggle.addEventListener("click", () => { autoUsed = true; transition(); });
-  motion.addEventListener("change", () => { if (timeline) settle(targetAura); });
+
+  // An explicit studio upload takes precedence over the component's source config.
+  function setSources(profile = {}) {
+    description = profile.alt || "Portrait of " + (profile.name || "the portfolio owner");
+    describe();
+    let changed = false;
+    for (const [key, layer] of Object.entries(layers)) {
+      const field = key === "normal" ? "portrait" : "auraPortrait";
+      const saved = profile[field];
+      const src = saved && saved !== globalThis.PortfolioContent?.defaults.profile[field] ? saved : PORTRAITS[key].src;
+      const image = layer.querySelector("img");
+      if (image.getAttribute("src") !== src) { image.src = src; changed = true; }
+    }
+    if (sourceVersion && !changed) return;
+    const version = ++sourceVersion;
+    ready = false;
+    settle();
+    toggle.hidden = true;
+    const images = Object.values(layers).map(layer => layer.querySelector("img"));
+    Promise.all(images.map(image => image.decode())).then(() => {
+      if (version !== sourceVersion) return;
+      const aura = layers.aura.querySelector("img");
+      layers.aura.style.setProperty("--shine-mask", "url(" + JSON.stringify(aura.src) + ")");
+      ready = true;
+      toggle.hidden = false;
+      settle();
+      maybeAuto();
+    }).catch(() => { if (version === sourceVersion) { active = "normal"; settle(); } });
+  }
   const loaded = document.readyState === "complete" ? Promise.resolve() :
     new Promise(resolve => window.addEventListener("load", resolve, {once: true}));
   const deadline = loaded.then(() => new Promise(resolve => setTimeout(resolve, 1000)));
-
-  function setSources(profile) {
-    description = profile.alt || ("Portrait of " + profile.name);
-    describe();
-    if (generation && photo.getAttribute("src") === profile.portrait && aura.getAttribute("src") === profile.auraPortrait) return;
-    const current = ++generation;
-    ready = false;
-    toggle.hidden = true;
-    settle(showingAura);
-    if (photo.getAttribute("src") !== profile.portrait) photo.src = profile.portrait;
-    if (aura.getAttribute("src") !== profile.auraPortrait) aura.src = profile.auraPortrait;
-    Promise.all([photo.decode(), aura.decode(), ribbon.decode().catch(() => {})]).then(() => {
-      if (current !== generation) return;
-      ready = true;
-      toggle.hidden = false;
-      maybeAuto();
-    }).catch(() => { if (current === generation) settle(false); });
-  }
-  return {setSources, startAuto() { deadline.then(() => { autoDue = true; maybeAuto(); }); }};
+  return {align, setSources, startAuto() { deadline.then(() => { autoDue = true; maybeAuto(); }); }};
 })();
-
-if (window.gsap && window.ScrollTrigger) {
-  gsap.registerPlugin(ScrollTrigger);
-  gsap.matchMedia().add("(prefers-reduced-motion: no-preference)", () => {
-    gsap.to(".intro-shade", {
-      opacity: 1, ease: "none",
-      scrollTrigger: {trigger: "#home", start: "top top", end: "bottom top", scrub: true}
-    });
-  });
-}

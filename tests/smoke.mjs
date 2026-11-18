@@ -65,36 +65,36 @@ try {
   await until(()=>evaluate('document.body.classList.contains("ready") && !document.getElementById("portraitToggle").hidden'));
   assert.equal(await evaluate('document.getElementById("portraitAction").textContent'),"Show Aura");
   assert.equal(await evaluate('document.querySelectorAll("link[rel=preload][as=image]").length'),2);
-  const midScan = () => evaluate(`(() => {
-    const sweep = document.querySelector(".portrait-sweep");
-    const aura = document.getElementById("auraPortrait");
-    const photo = document.getElementById("profilePortrait");
-    const mask = getComputedStyle(aura).clipPath.match(/[-.\\d]+%/g);
-    if (!mask || getComputedStyle(sweep).visibility !== "visible") return false;
-    const top = parseFloat(mask[2]), bottom = parseFloat(mask[4]);
-    if (top < 18 || top > 85) return false;
-    const x = new DOMMatrix(getComputedStyle(sweep).transform).m41;
-    const box = sweep.getBoundingClientRect();
-    return Math.abs(x / box.width * 100 - top) < .15 && Math.abs(top - bottom - 16) < .1
-      && JSON.stringify(photo.getBoundingClientRect()) === JSON.stringify(aura.getBoundingClientRect());
-  })()`);
-  await until(midScan);
-  const scanTime = await evaluate('performance.now() - performance.getEntriesByType("navigation")[0].loadEventEnd');
-  assert.ok(scanTime >= 1000);
   const label = () => evaluate('document.getElementById("portraitAction").textContent');
   const clickPortrait = () => evaluate('document.getElementById("portraitToggle").click()');
-  await until(async()=>await label() === "Show Photo");
-  assert.equal(await evaluate('getComputedStyle(document.getElementById("profilePortrait")).visibility'),"hidden");
+  const settled = () => evaluate('!document.getElementById("portraitFrame").classList.contains("is-changing")');
+  const pressD = () => evaluate('document.dispatchEvent(new KeyboardEvent("keydown",{key:"d",bubbles:true}))');
+  const crossfading = () => evaluate(`(() => {
+    const [photo,aura] = [...document.querySelectorAll(".portrait-layer")].map(el=>getComputedStyle(el));
+    return +photo.opacity > 0 && +aura.opacity > 0 && Math.abs(+photo.opacity + +aura.opacity - 1) < .001
+      && parseFloat(photo.filter.slice(5)) > 0 && parseFloat(aura.filter.slice(5)) > 0;
+  })()`);
+  await until(crossfading);
+  assert.ok(await evaluate('performance.now() - performance.getEntriesByType("navigation")[0].loadEventEnd >= 1000'));
   await clickPortrait();
-  await until(midScan);
-  await until(async()=>await label() === "Show Aura");
-  await delay(1300);
-  assert.ok(await evaluate('getComputedStyle(document.getElementById("auraPortrait")).visibility === "hidden" && getComputedStyle(document.querySelector(".portrait-sweep")).visibility === "hidden"'));
+  assert.equal(await label(),"Show Normal","Rapid clicks must not reverse a running transition");
+  await until(settled);
+  assert.ok(await evaluate('document.getElementById("portraitFrame").classList.contains("is-shining")'));
+  await clickPortrait();
+  await until(crossfading);
+  await until(settled);
+  assert.equal(await label(),"Show Aura");
+  await pressD();
+  assert.ok(await evaluate('[...document.querySelectorAll(".portrait-layer")].every(el=>+getComputedStyle(el).opacity===.5)'));
+  await clickPortrait();
+  assert.equal(await label(),"Show Aura");
+  await pressD();
+  assert.ok(await evaluate('getComputedStyle(document.querySelector("[data-portrait=aura]")).opacity==="0"'));
   await evaluate('scrollTo({top:document.getElementById("home").offsetHeight / 2,behavior:"instant"})');
   await until(()=>evaluate('Number(getComputedStyle(document.querySelector(".intro-shade")).opacity) > .4 && Number(getComputedStyle(document.querySelector(".intro-shade")).opacity) < .6'));
   await evaluate(`document.querySelector('.intro-nav a[href="#about"]').click()`);
   await until(()=>evaluate('document.getElementById("about").getBoundingClientRect().top < 120'));
-  console.log("Automatic portrait reveal, registered ribbon and mask, reverse scan and stable endpoints passed.");
+  console.log("Portrait crossfades, input lock, chrome shine, debug overlay and scroll transition passed.");
   await cmd("Page.navigate",{url:origin+"/?editor#admin="+owner});
   await until(()=>evaluate('document.querySelector("#studioDialog")?.open'));
   for (const width of [320,390,768,1024,1536]) {
@@ -107,13 +107,17 @@ try {
       });
       const portrait = document.getElementById("profilePortrait").getBoundingClientRect();
       const button = document.getElementById("portraitToggle").getBoundingClientRect();
-      const separate = button.right <= portrait.left || button.left >= portrait.right || button.top >= portrait.bottom || button.bottom <= portrait.top;
-      return {lines, separate, mobileStack:title.getBoundingClientRect().bottom <= portrait.top,
+      const separate = innerWidth <= 820 ? +getComputedStyle(document.getElementById("portraitToggle")).zIndex > +getComputedStyle(document.getElementById("home"),"::after").zIndex :
+        button.right <= portrait.left || button.left >= portrait.right;
+      const chrome = document.getElementById("auraPortrait").getBoundingClientRect();
+      const deltaX = Math.abs(portrait.left + portrait.width * .49875 - chrome.left - chrome.width * .5125);
+      const deltaY = Math.abs(portrait.top + portrait.height * .1925 - chrome.top - chrome.height * .25625);
+      return {lines, separate, aligned:deltaX < .1 && deltaY < .1, mobileStack:title.getBoundingClientRect().bottom <= portrait.top,
         pageHeight:document.getElementById("home").offsetHeight, size:parseFloat(getComputedStyle(title).fontSize),width:portrait.width,height:portrait.height};
     })()`);
     assert.deepEqual(layout.lines,["Christian Rey","Adolfo"],"Two-line name at "+width);
     assert.ok(layout.size >= 50 && layout.separate && layout.pageHeight >= 863,"Full-height hero and separate control at "+width);
-    assert.ok(layout.width === layout.height && (width <= 820 ? layout.mobileStack : layout.height > 600),"Portrait scale and position at "+width);
+    assert.ok(layout.aligned && Math.abs(layout.width-layout.height) < .1 && (width <= 820 ? layout.mobileStack : layout.height > 600),"Eye registration and portrait position at "+width+" "+JSON.stringify(layout));
   }
   await evaluate('document.querySelector("[data-editor-tab=journey]").click()');
   assert.equal(await evaluate('document.querySelectorAll("#collection-certificates details").length'),3);
@@ -155,11 +159,11 @@ try {
   await cmd("Page.reload");
   await until(()=>evaluate('document.body.classList.contains("ready") && !document.getElementById("portraitToggle").hidden'));
   await clickPortrait();
-  const midFade = () => evaluate('(()=>{const a=getComputedStyle(document.getElementById("auraPortrait"));return Number(a.opacity)>0 && Number(a.opacity)<1 && a.clipPath==="none" && getComputedStyle(document.querySelector(".portrait-sweep")).visibility==="hidden"})()');
+  const midFade = () => evaluate('(()=>{const a=getComputedStyle(document.querySelector("[data-portrait=aura]")); return +a.opacity>0 && +a.opacity<1 && a.transform==="none" && a.filter==="none" && a.transitionDuration==="0.2s"})()');
   await until(midFade);
-  await until(async()=>await label() === "Show Photo");
+  await until(settled);
   await delay(1300);
-  assert.equal(await label(),"Show Photo","An early click must cancel the automatic transition");
+  assert.equal(await label(),"Show Normal","An early click must cancel the automatic transition");
   await clickPortrait();
   await until(midFade);
   await until(async()=>await label() === "Show Aura");
