@@ -35,7 +35,7 @@ try {
   assert.equal((await fetch(origin+"/api/portfolio",{method:"PUT",body:"{}"})).status,403);
   console.log("Visitor API and owner-only write check passed.");
   const debuggingPort = port+11000;
-  browser = spawn(browserPath,["--headless=new","--disable-gpu","--no-first-run","--disable-background-networking","--remote-debugging-port="+debuggingPort,"--user-data-dir="+path.join(temp,"browser"),"about:blank"],{windowsHide:true,stdio:"ignore"});
+  browser = spawn(browserPath,["--headless=new","--use-angle=swiftshader","--enable-unsafe-swiftshader","--no-first-run","--disable-background-networking","--remote-debugging-port="+debuggingPort,"--user-data-dir="+path.join(temp,"browser"),"about:blank"],{windowsHide:true,stdio:"ignore"});
   browser.on("error",()=>{});
   const debuggerURL = await until(async()=>{
     const pages = await (await fetch("http://127.0.0.1:"+debuggingPort+"/json")).json();
@@ -61,27 +61,75 @@ try {
     return evaluation.result.value;
   };
   await cmd("Runtime.enable");
-  await cmd("Page.navigate",{url:origin});
+  await cmd("Page.enable");
+  await cmd("Page.addScriptToEvaluateOnNewDocument",{source:`
+    if (location.search==="?no-webgl") {
+      const get = HTMLCanvasElement.prototype.getContext;
+      HTMLCanvasElement.prototype.getContext=function(type,options){return type.startsWith("webgl") ? null : get.call(this,type,options);};
+    }
+    window.shardDraws = [];
+    window.releasedGPU={deleteTexture:0,deleteBuffer:0,deleteProgram:0};
+    for (const method of Object.keys(releasedGPU)) {
+      const original=WebGL2RenderingContext.prototype[method];
+      WebGL2RenderingContext.prototype[method]=function(resource){
+        if (this.canvas.classList.contains("portrait-canvas") && resource) releasedGPU[method]++;
+        return original.call(this,resource);
+      };
+    }
+    document.addEventListener("DOMContentLoaded",()=>{window.firstPortraitLabel=document.getElementById("portraitAction")?.textContent;});
+    const draw = WebGL2RenderingContext.prototype.drawArraysInstanced;
+    WebGL2RenderingContext.prototype.drawArraysInstanced = function(mode, first, vertices, instances) {
+      if (this.canvas.classList.contains("portrait-canvas")) shardDraws.push(instances);
+      return draw.call(this,mode,first,vertices,instances);
+    };
+    if (location.hash === "#burst-test") new MutationObserver(()=>{
+      const tl=window.gsap?.globalTimeline.getChildren().find(t=>t.data==="portrait-burst");
+      if (tl && tl !== window.sampledBurst) {window.sampledBurst=tl;tl.pause().progress(.22);}
+    }).observe(document,{childList:true,subtree:true,attributes:true,attributeFilter:["class"]});
+  `});
+  await cmd("Page.navigate",{url:origin+"/#burst-test"});
   await until(()=>evaluate('document.body.classList.contains("ready") && !document.getElementById("portraitToggle").hidden'));
-  assert.equal(await evaluate('document.getElementById("portraitAction").textContent'),"Show Aura");
+  assert.equal(await evaluate('firstPortraitLabel'),"Show Aura");
   assert.equal(await evaluate('document.querySelectorAll("link[rel=preload][as=image]").length'),2);
   const label = () => evaluate('document.getElementById("portraitAction").textContent');
   const clickPortrait = () => evaluate('document.getElementById("portraitToggle").click()');
   const settled = () => evaluate('!document.getElementById("portraitFrame").classList.contains("is-changing")');
   const pressD = () => evaluate('document.dispatchEvent(new KeyboardEvent("keydown",{key:"d",bubbles:true}))');
-  const crossfading = () => evaluate(`(() => {
-    const [photo,aura] = [...document.querySelectorAll(".portrait-layer")].map(el=>getComputedStyle(el));
-    return +photo.opacity > 0 && +aura.opacity > 0 && Math.abs(+photo.opacity + +aura.opacity - 1) < .001
-      && parseFloat(photo.filter.slice(5)) > 0 && parseFloat(aura.filter.slice(5)) > 0;
-  })()`);
-  await until(crossfading);
+  const checkTexture = async (id,x,y) => {
+    const error=await evaluate(`(()=>{
+      sampledBurst.progress(.01).progress(0);
+      const gpu=document.querySelector(".portrait-canvas");
+      const sample=document.createElement("canvas"), ref=document.createElement("canvas");
+      const width=sample.width=ref.width=gpu.width, height=sample.height=ref.height=gpu.height;
+      const a=sample.getContext("2d"),b=ref.getContext("2d");
+      a.drawImage(gpu,0,0);
+      b.fillStyle="white";b.fillRect(0,0,width,height);
+      b.drawImage(document.getElementById("${id}"),width*${x},height*${y},width,height);
+      const actual=a.getImageData(0,0,width,height).data,expected=b.getImageData(0,0,width,height).data;
+      let difference=0;
+      for(let i=0;i<actual.length;i+=4) difference+=Math.abs(actual[i]-expected[i]);
+      sampledBurst.progress(.22);
+      return difference/(width*height);
+    })()`);
+    assert.ok(error<6,"GPU image differs from the registered portrait: "+error);
+  };
+  await until(()=>evaluate('window.sampledBurst?.duration()===.5 && !document.querySelector(".portrait-canvas").hidden'));
+  await checkTexture("profilePortrait",0,0);
+  assert.ok(await evaluate('shardDraws.includes(96) && document.querySelectorAll("#portraitFrame canvas").length===1'));
   assert.ok(await evaluate('performance.now() - performance.getEntriesByType("navigation")[0].loadEventEnd >= 1000'));
   await clickPortrait();
   assert.equal(await label(),"Show Normal","Rapid clicks must not reverse a running transition");
+  await evaluate('sampledBurst.resume();true');
   await until(settled);
-  assert.ok(await evaluate('document.getElementById("portraitFrame").classList.contains("is-shining")'));
   await clickPortrait();
-  await until(crossfading);
+  await until(()=>evaluate('window.sampledBurst?.duration()===.7 && sampledBurst.paused()'));
+  await checkTexture("auraPortrait",-.01375,-.06375);
+  await evaluate('scrollTo({top:document.getElementById("home").offsetHeight+100,behavior:"instant"})');
+  await delay(250);
+  const offscreenDraws=await evaluate('shardDraws.length');
+  await delay(200);
+  assert.equal(await evaluate('shardDraws.length'),offscreenDraws);
+  await evaluate('scrollTo({top:0,behavior:"instant"})');
   await until(settled);
   assert.equal(await label(),"Show Aura");
   await pressD();
@@ -94,7 +142,66 @@ try {
   await until(()=>evaluate('Number(getComputedStyle(document.querySelector(".intro-shade")).opacity) > .4 && Number(getComputedStyle(document.querySelector(".intro-shade")).opacity) < .6'));
   await evaluate(`document.querySelector('.intro-nav a[href="#about"]').click()`);
   await until(()=>evaluate('document.getElementById("about").getBoundingClientRect().top < 120'));
-  console.log("Portrait crossfades, input lock, chrome shine, debug overlay and scroll transition passed.");
+  await evaluate('document.getElementById("portraitFrame").remove()');
+  await until(()=>evaluate('document.getElementById("portraitToggle").hidden && Object.values(releasedGPU).every(count=>count>0)'));
+  console.log("Desktop WebGL bursts in both directions, instanced draws, offscreen pause, lock and debug overlay passed.");
+  await cmd("Emulation.setDeviceMetricsOverride",{width:1280,height:800,deviceScaleFactor:1,mobile:false});
+  await cmd("Page.navigate",{url:origin+"/?lens-test"});
+  await until(async()=>await label()==="Show Normal" && await settled());
+  const move = (x,y) => cmd("Input.dispatchMouseEvent",{type:"mouseMoved",x,y});
+  const lensHidden = () => evaluate('document.querySelector(".aura-lens").hidden');
+  const point = await evaluate(`(()=>{
+    const b=document.getElementById("portraitFrame").getBoundingClientRect();
+    return {x:Math.round(b.left+b.width*.50),y:Math.round(b.top+b.height*.195),
+      lower:Math.round(b.top+b.height*.67),left:b.left};
+  })()`);
+  const patchPixels = async (x,y) => {
+    const {data} = await cmd("Page.captureScreenshot",{format:"png",clip:{x:x-7,y:y-7,width:14,height:14,scale:1}});
+    return evaluate(`(async()=>{
+      const img=new Image();img.src="data:image/png;base64,${data}";await img.decode();
+      const c=document.createElement("canvas").getContext("2d");c.drawImage(img,0,0);
+      return [...c.getImageData(0,0,14,14).data];
+    })()`);
+  };
+  const diff = (a,b) => a.reduce((sum,v,i)=>sum+Math.abs(v-b[i]),0)/a.length;
+  const auraEye = await patchPixels(point.x,point.y);
+  await clickPortrait(); await until(settled);
+  const normalEye = await patchPixels(point.x,point.y), normalTorso = await patchPixels(point.x,point.lower);
+  assert.ok(diff(auraEye,normalEye)>12,"The eye sample must distinguish the two portraits");
+  await move(point.left-50,point.y);
+  await until(async()=>!await lensHidden());
+  await move(point.x,point.y);
+  await until(()=>evaluate('Number(document.querySelector(".aura-lens").style.getPropertyValue("--lens-alpha"))===1'));
+  await until(()=>evaluate('Math.abs(parseFloat(document.querySelector(".aura-lens").style.getPropertyValue("--lens-x"))-document.getElementById("portraitFrame").clientWidth*.5)<2'));
+  assert.ok(diff(await patchPixels(point.x,point.y),auraEye)<4,"Lens core must show the registered alternate eye");
+  assert.ok(diff(await patchPixels(point.x,point.lower),normalTorso)<2,"Outside the aperture the base must stay visible");
+  const moving = await evaluate(`(async()=>{
+    const lens=document.querySelector(".aura-lens"), base=document.getElementById("auraPortrait");
+    const twin=lens.querySelector('[data-lens-portrait="aura"] img');
+    const start=parseFloat(lens.style.getPropertyValue("--lens-x"));
+    document.dispatchEvent(new PointerEvent("pointermove",{clientX:${point.x+120},clientY:${point.y+55},pointerType:"mouse"}));
+    await new Promise(requestAnimationFrame);
+    const shifted=parseFloat(lens.style.getPropertyValue("--lens-x"))-start;
+    const original=base.getBoundingClientRect(), overlay=twin.getBoundingClientRect();
+    return {shifted,glow:+lens.style.getPropertyValue("--lens-glow"),
+      drift:Math.max(Math.abs(original.left-overlay.left),Math.abs(original.top-overlay.top),
+        Math.abs(original.width-overlay.width),Math.abs(original.height-overlay.height))};
+  })()`);
+  assert.ok(moving.shifted>0 && moving.shifted<120 && moving.glow>.35 && moving.drift<.15,
+    "The aperture should lag and brighten without shifting the moving eye: "+JSON.stringify(moving));
+  await move(point.x+1,point.y);
+  await clickPortrait(); await until(settled);
+  assert.ok(diff(await patchPixels(point.x,point.y),normalEye)<4,"Stationary lens must reverse when the base swaps");
+  await pressD(); assert.equal(await lensHidden(),true); await pressD();
+  await move(point.x+5,point.y); await until(async()=>!await lensHidden());
+  await delay(310);
+  await move(2,2);
+  await until(()=>evaluate('(()=>{const lens=document.querySelector(".aura-lens");return !lens.hidden && +lens.style.getPropertyValue("--lens-alpha")<.95;})()'));
+  await until(lensHidden);
+  const idleStyle = await evaluate('document.querySelector(".aura-lens").getAttribute("style")');
+  await delay(150);
+  assert.equal(await evaluate('document.querySelector(".aura-lens").getAttribute("style")'),idleStyle);
+  console.log("Lens proximity, registration in both directions, outer pixels, debug, exit and idle state passed.");
   await cmd("Page.navigate",{url:origin+"/?editor#admin="+owner});
   await until(()=>evaluate('document.querySelector("#studioDialog")?.open'));
   for (const width of [320,390,768,1024,1536]) {
@@ -159,9 +266,10 @@ try {
   await cmd("Page.reload");
   await until(()=>evaluate('document.body.classList.contains("ready") && !document.getElementById("portraitToggle").hidden'));
   await clickPortrait();
-  const midFade = () => evaluate('(()=>{const a=getComputedStyle(document.querySelector("[data-portrait=aura]")); return +a.opacity>0 && +a.opacity<1 && a.transform==="none" && a.filter==="none" && a.transitionDuration==="0.2s"})()');
+  const midFade = () => evaluate('(()=>{const a=getComputedStyle(document.querySelector("[data-portrait=aura]")); return +a.opacity>0 && +a.opacity<1 && a.transform==="none" && a.filter==="none" && a.transitionDuration==="0.3s"})()');
   await until(midFade);
   await until(settled);
+  await move(180,500); await delay(90); assert.equal(await lensHidden(),true);
   await delay(1300);
   assert.equal(await label(),"Show Normal","An early click must cancel the automatic transition");
   await clickPortrait();
@@ -174,6 +282,23 @@ try {
       assert.fail("Horizontal overflow at "+width+" "+JSON.stringify(overflow));
     }
   }
+  await cmd("Emulation.setEmulatedMedia",{features:[]});
+  for (const mode of ["touch","no-webgl"]) {
+    await cmd("Emulation.setTouchEmulationEnabled",mode === "touch" ? {enabled:true,maxTouchPoints:1} : {enabled:false});
+    await cmd("Page.navigate",{url:origin+"/?"+mode});
+    await until(()=>evaluate('document.body.classList.contains("ready") && !document.getElementById("portraitToggle").hidden'));
+    await clickPortrait();
+    await until(midFade);
+    assert.ok(await evaluate('document.querySelector(".portrait-canvas").hidden && !shardDraws.length'));
+    await until(settled);
+    if (mode==="touch") {
+      await move(point.x,point.y); await delay(90); assert.equal(await lensHidden(),true);
+      assert.ok(await evaluate('!performance.getEntriesByType("resource").some(r=>r.name.includes("three.module"))'));
+    }
+  }
+  await evaluate('portraitSwitch.destroy()');
+  await pressD();
+  assert.ok(await evaluate('document.getElementById("portraitToggle").hidden && !document.getElementById("portraitFrame").classList.contains("is-debug")'));
   assert.deepEqual(errors,[]);
   console.log("Browser editing, image upload, shared save, reload, project filter, case study, theme, quick jump and five viewport widths passed.");
 } finally {

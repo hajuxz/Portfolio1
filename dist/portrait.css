@@ -13,21 +13,18 @@
   isolation: isolate;
   pointer-events: none;
 }
-.portrait-layer, .portrait-art, .portrait-art > img, .portrait-gloss {
+.portrait-layer, .portrait-art, .portrait-art > img, .portrait-canvas {
   position: absolute; inset: 0; width: 100%; height: 100%;
 }
-.portrait-layer {
-  opacity: 0;
-  transform: scale(1.03);
-  transform-origin: var(--eye-x) var(--eye-y);
-  filter: blur(8px);
-}
-.portrait-layer[data-state="shown"] { opacity: 1; transform: scale(1); filter: blur(0); }
-.portrait-layer[data-state="leaving"] { transform: scale(.98); }
-.intro-portrait.is-changing .portrait-layer {
-  will-change: transform, opacity;
+.portrait-canvas { pointer-events: none; }
+.portrait-layer { opacity: 0; }
+.portrait-layer[data-state="shown"] { opacity: 1; }
+.intro-portrait.is-webgl .portrait-layer { visibility: hidden; }
+.intro-portrait.is-fading .portrait-layer {
+  will-change: opacity;
   mix-blend-mode: plus-lighter;
-  transition: opacity 650ms var(--swap-ease), transform 650ms var(--swap-ease), filter 650ms var(--swap-ease);
+  transition: opacity var(--portrait-fade) linear;
+  transition-duration: var(--portrait-fade) !important; /* Override the site-wide reduced-motion reset. */
 }
 .portrait-art {
   transform: translate(var(--x, 0px), var(--y, 0px)) scale(var(--scale, 1));
@@ -38,17 +35,50 @@
   content: ""; position: absolute; left: 15%; top: 78.9%; width: 70%; height: 5.5%;
   background: radial-gradient(ellipse, rgb(24 30 38 / .23), transparent 72%);
 }
-[data-portrait="aura"] .portrait-art::before { top: 85.275%; }
-.portrait-gloss { overflow: hidden; mask: var(--shine-mask) bottom center / contain no-repeat; }
-.portrait-gloss::after {
-  content: ""; position: absolute; inset: 0; opacity: 0;
-  background: linear-gradient(107deg, transparent 39%, rgb(255 255 255 / .32) 49%, transparent 58%);
+[data-portrait="aura"] .portrait-art::before, [data-lens-portrait="aura"] .portrait-art::before { top: 85.275%; }
+
+/* Only this small window travels. Its inner stage cancels the movement and
+   retains the same dimensions and per-image calibration as the base portrait. */
+.aura-lens {
+  position: absolute; z-index: 1; top: 0; left: 0;
+  width: calc(2 * var(--lens-half)); height: calc(2 * var(--lens-half));
+  transform-origin: 0 0;
+  transform: translate(var(--lens-x), var(--lens-y)) var(--lens-shape) translate(-50%, -50%);
+  opacity: var(--lens-alpha, 0);
+  will-change: transform, opacity;
 }
-.is-shining .portrait-gloss::after { animation: portrait-shine 800ms ease-in-out both; }
-@keyframes portrait-shine {
-  0% { opacity: 0; transform: translateX(-76%); }
-  18%, 78% { opacity: .65; }
-  100% { opacity: 0; transform: translateX(76%); }
+.aura-lens, .aura-lens * { pointer-events: none; }
+.aura-lens[hidden], .is-debug .aura-lens { display: none; }
+.aura-lens-mask {
+  position: absolute; inset: 0; overflow: hidden;
+  --mask: radial-gradient(circle at center, #000 0 var(--lens-r), transparent calc(var(--lens-r) + var(--lens-soft)));
+  -webkit-mask-image: var(--mask);
+  mask-image: var(--mask);
+}
+.aura-lens-register {
+  position: absolute; left: 0; top: 0;
+  width: var(--stage-width); height: var(--stage-height);
+  isolation: isolate; transform-origin: 0 0;
+  transform: translate(var(--lens-half), var(--lens-half)) var(--lens-inverse)
+    translate(calc(0px - var(--lens-x)), calc(0px - var(--lens-y)));
+  will-change: transform;
+}
+.aura-lens-image {
+  position: absolute; inset: 0;
+  background: #fff; opacity: 0; mix-blend-mode: plus-lighter;
+  transition: opacity var(--lens-swap, 0s) cubic-bezier(.22, 1, .36, 1);
+}
+.aura-lens[data-reveal="aura"] [data-lens-portrait="aura"],
+.aura-lens[data-reveal="normal"] [data-lens-portrait="normal"] { opacity: 1; }
+.aura-lens::after {
+  content: ""; position: absolute; inset: 0; pointer-events: none;
+  opacity: var(--lens-glow);
+  background: radial-gradient(circle, transparent var(--lens-r),
+    var(--lens-accent) calc(var(--lens-r) + var(--lens-soft) * .39),
+    transparent calc(var(--lens-r) + var(--lens-soft)));
+}
+@media (prefers-reduced-motion: reduce), (hover: none), (pointer: coarse), print {
+  .aura-lens { display: none; }
 }
 .intro-portrait.is-debug .portrait-layer {
   opacity: .5; transform: none; filter: none; mix-blend-mode: plus-lighter; transition: none;
@@ -72,14 +102,15 @@
 .intro-switch svg {
   width: 17px; height: 17px; fill: none; stroke: currentColor;
   stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round;
-  transform: rotate(var(--turn, 0deg)); transition: transform 650ms cubic-bezier(.22,1,.36,1);
+  transform: rotate(var(--turn, 0deg)); transition: transform var(--swap-duration, 0s) cubic-bezier(.22,1,.36,1);
 }
 .portrait-labels { display: grid; overflow: hidden; white-space: nowrap; }
 .portrait-labels strong { grid-area: 1/1; font-size: 11px; font-weight: 700; letter-spacing: .1em; line-height: 1.45; text-transform: uppercase; }
 .portrait-old-label { opacity: 0; }
 .intro-switch small { display: block; white-space: nowrap; color: var(--cover-muted, #535b66); font-size: 11px; }
-.intro-switch.is-changing #portraitAction { animation: portrait-label-in 190ms 110ms both; }
-.intro-switch.is-changing .portrait-old-label { animation: portrait-label-out 150ms both; }
+.intro-switch.is-changing:not(.simple-swap) #portraitAction { animation: portrait-label-in var(--labelIn) var(--labelDelay) both; }
+.intro-switch.is-changing:not(.simple-swap) .portrait-old-label { animation: portrait-label-out var(--labelOut) both; }
+.intro-switch.simple-swap svg { transform: none; transition: none; }
 @keyframes portrait-label-out { to { opacity: 0; transform: translateY(-100%); } from { opacity: 1; } }
 @keyframes portrait-label-in { from { opacity: 0; transform: translateY(100%); } to { opacity: 1; transform: none; } }
 
@@ -100,15 +131,4 @@
   .intro-switch { position: static; grid-row: 3; grid-column: 1; justify-self: start; gap: 8px; }
 }
 @media (max-width: 380px) { .intro-switch-icon { width: 34px; height: 34px; } }
-@media (prefers-reduced-motion: reduce) {
-  .intro-portrait .portrait-layer { transform: none; filter: none; }
-  .intro-portrait.is-changing .portrait-layer {
-    transition: opacity 200ms linear;
-    transition-duration: 200ms !important; /* The site's global reduced-motion reset uses !important. */
-    will-change: opacity;
-  }
-  .intro-switch svg { transform: none; transition: none; }
-  .intro-switch.is-changing #portraitAction, .intro-switch.is-changing .portrait-old-label,
-  .is-shining .portrait-gloss::after { animation: none; }
-}
 @media print { .intro-switch { display: none; } }
