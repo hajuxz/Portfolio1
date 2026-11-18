@@ -12,8 +12,8 @@ const root = new URL("./dist/",import.meta.url);
 const stateDir = process.env.PORTFOLIO_DATA_DIR ? pathToFileURL(path.resolve(process.env.PORTFOLIO_DATA_DIR)+path.sep) : new URL("./.local/",import.meta.url);
 const stateFile = new URL("portfolio.json",stateDir);
 const limit = 12*1024*1024;
-const mime = {html:"text/html",css:"text/css",js:"text/javascript",svg:"image/svg+xml",pdf:"application/pdf",png:"image/png",jpg:"image/jpeg"};
-const staticFiles = new Set(["index.html","styles.css","app.js","studio.js","content.js",defaults.profile.portrait,...defaults.projects.map(p=>p.image),...certificateLibrary.flatMap(c=>[c.file,c.preview])]);
+const mime = {html:"text/html",css:"text/css",js:"text/javascript",svg:"image/svg+xml",pdf:"application/pdf",png:"image/png",jpg:"image/jpeg",webp:"image/webp"};
+const staticFiles = new Set(["index.html","styles.css","app.js","studio.js","content.js","portrait.js","vendor/gsap.min.js","assets/aura-ribbon.svg","assets/portrait-placeholder.svg",defaults.profile.portrait,defaults.profile.auraPortrait,...defaults.projects.map(p=>p.image),...certificateLibrary.flatMap(c=>[c.file,c.preview])]);
 const hash = value => '"'+createHash("sha256").update(JSON.stringify(value)).digest("hex")+'"';
 let content;
 try { content = validate(JSON.parse(await readFile(stateFile,"utf8"))); }

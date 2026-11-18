@@ -66,9 +66,7 @@ function render(content) {
   document.title = (p.name || "My portfolio") + " — Portfolio";
   const values = {heroAvailability:p.availability, heroEyebrow:p.eyebrow, heroHeadline:p.headline, heroLocation:p.location, aboutTitle:p.aboutTitle, aboutIntro:p.aboutIntro, aboutBio:p.bio, contactIntro:content.contact.intro, footerNote:p.footer, footerName:p.name, footerYear:new Date().getFullYear()};
   Object.entries(values).forEach(([id,value]) => byId(id).textContent = value);
-  const portrait = byId("profilePortrait");
-  if (portrait.getAttribute("src") !== p.portrait) portrait.src = p.portrait;
-  portrait.alt = p.alt;
+  portraitSwitch.setSources(p);
   const resume = byId("resumeLink");
   resume.textContent = safeURL(p.resume) ? "View résumé ↗" : "Get in touch ↗";
   resume.href = safeURL(p.resume) || "#contact";
@@ -215,7 +213,6 @@ function toggleTheme() {
   document.documentElement.dataset.theme = theme;
   syncThemeButtons();
   updateGalleryControls();
-  playPortrait();
   try { localStorage.setItem("orbitfolio.theme",theme); } catch {}
 }
 const commands = [
@@ -286,33 +283,6 @@ const revealObserver = new IntersectionObserver(entries=>entries.forEach(e=>{
   if (e.isIntersecting) {e.target.classList.add("is-visible"); revealObserver.unobserve(e.target);}
 }),{threshold:0.03});
 all(".reveal").forEach(el=>revealObserver.observe(el));
-const portraitStage = document.querySelector(".hero__visual");
-const particles = document.querySelector(".portrait-particles");
-for (let index=0;index<18;index++) {
-  const particle = node("i");
-  const angle = index*2.4, radius = 28+(index%4)*6;
-  const x = Math.cos(angle)*radius, y = Math.sin(angle)*radius;
-  particle.style.left = (50+x)+"%";
-  particle.style.top = (50+y)+"%";
-  particle.style.setProperty("--from-x",(-x*1.2)+"px");
-  particle.style.setProperty("--from-y",(-y*1.2)+"px");
-  particle.style.setProperty("--delay",(index%5)*50+"ms");
-  particles.append(particle);
-}
-function playPortrait() {
-  if (reduced.matches) return;
-  portraitStage.classList.remove("portrait-playing");
-  void portraitStage.offsetWidth;
-  portraitStage.classList.add("portrait-playing");
-}
-byId("replayPortrait").onclick = playPortrait;
-const portraitObserver = new IntersectionObserver(entries=>{
-  if (entries.some(entry=>entry.isIntersecting)) {
-    playPortrait();
-    portraitObserver.disconnect();
-  }
-},{threshold:.35});
-portraitObserver.observe(portraitStage);
 function updateClock() {
   byId("localTime").textContent = new Intl.DateTimeFormat("en-PH",{hour:"numeric",minute:"2-digit", timeZone:"Asia/Manila"}).format(new Date())+" PHT";
 }

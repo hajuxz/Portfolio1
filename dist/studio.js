@@ -9,7 +9,7 @@ const fieldNames = {
 };
 const groups = {
   certificates:["title","issuer","date","document"],
-  profile:["name","eyebrow","headline","roles","location","availability","resume","portrait","alt","aboutTitle","aboutIntro","bio","footer"],
+  profile:["name","eyebrow","headline","roles","location","availability","resume","portrait","auraPortrait","alt","aboutTitle","aboutIntro","bio","footer"],
   services:["title","description"], interests:["title","description"], projects:["title","category","year","image","alt","summary","detail","highlights","tags","url"],
   skills:["title","description","items"], journey:["title","date","organization","description","type"],
   contact:["email","intro","github","linkedin","website"], appearance:["accent","secondary"]
@@ -69,9 +69,14 @@ function addField(owner, field) {
     input.oninput = ()=>{owner.document = input.value.trim(); markChanged();};
     wrapper.append(label,urlLabel); return wrapper;
   }
-  if (field === "image" || field === "portrait") {
+  if (["image", "portrait", "auraPortrait"].includes(field)) {
     const container = byId("imageFieldTemplate").content.firstElementChild.cloneNode(true);
     const preview = container.querySelector("img"), input = container.querySelector("input");
+    if (field !== "image") {
+      const title = field === "portrait" ? "Photo portrait" : "Chrome aura portrait";
+      container.querySelector("label").firstChild.textContent = "Replace " + title.toLowerCase() + " ";
+      preview.alt = title;
+    }
     preview.src = owner[field];
     input.onchange = async () => {
       if (!input.files[0]) return;
@@ -291,4 +296,7 @@ async function startPortfolio() {
   if (fragment.has("admin") && canPublish) openEditor();
 }
 render(saved);
-startPortfolio().catch(()=>toast("Portfolio loaded with sample content.",true)).finally(()=>document.body.classList.add("ready"));
+startPortfolio().catch(()=>toast("Portfolio loaded with sample content.",true)).finally(()=>{
+  document.body.classList.add("ready");
+  portraitSwitch.startAuto();
+});

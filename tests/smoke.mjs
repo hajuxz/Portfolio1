@@ -61,7 +61,37 @@ try {
     return evaluation.result.value;
   };
   await cmd("Runtime.enable");
-  await cmd("Page.navigate",{url:origin+"/#admin="+owner});
+  await cmd("Page.navigate",{url:origin});
+  await until(()=>evaluate('document.body.classList.contains("ready") && !document.getElementById("portraitToggle").hidden'));
+  assert.equal(await evaluate('document.getElementById("portraitAction").textContent'),"Show Aura");
+  assert.equal(await evaluate('document.querySelectorAll("link[rel=preload][as=image]").length'),2);
+  const midScan = () => evaluate(`(() => {
+    const sweep = document.querySelector(".portrait-sweep");
+    const aura = document.getElementById("auraPortrait");
+    const photo = document.getElementById("profilePortrait");
+    const mask = getComputedStyle(aura).clipPath.match(/[-.\\d]+%/g);
+    if (!mask || getComputedStyle(sweep).visibility !== "visible") return false;
+    const top = parseFloat(mask[2]), bottom = parseFloat(mask[4]);
+    if (top < 18 || top > 85) return false;
+    const x = new DOMMatrix(getComputedStyle(sweep).transform).m41;
+    const box = sweep.getBoundingClientRect();
+    return Math.abs(x / box.width * 100 - top) < .15 && Math.abs(top - bottom - 16) < .1
+      && JSON.stringify(photo.getBoundingClientRect()) === JSON.stringify(aura.getBoundingClientRect());
+  })()`);
+  await until(midScan);
+  const scanTime = await evaluate('performance.now() - performance.getEntriesByType("navigation")[0].loadEventEnd');
+  assert.ok(scanTime >= 1000);
+  const label = () => evaluate('document.getElementById("portraitAction").textContent');
+  const clickPortrait = () => evaluate('document.getElementById("portraitToggle").click()');
+  await until(async()=>await label() === "Show Photo");
+  assert.equal(await evaluate('getComputedStyle(document.getElementById("profilePortrait")).visibility'),"hidden");
+  await clickPortrait();
+  await until(midScan);
+  await until(async()=>await label() === "Show Aura");
+  await delay(1300);
+  assert.ok(await evaluate('getComputedStyle(document.getElementById("auraPortrait")).visibility === "hidden" && getComputedStyle(document.querySelector(".portrait-sweep")).visibility === "hidden"'));
+  console.log("Automatic portrait reveal, registered ribbon and mask, reverse scan and stable endpoints passed.");
+  await cmd("Page.navigate",{url:origin+"/?editor#admin="+owner});
   await until(()=>evaluate('document.querySelector("#studioDialog")?.open'));
   for (const width of [320,390,768,1024,1536]) {
     await cmd("Emulation.setDeviceMetricsOverride",{width,height:864,deviceScaleFactor:1,mobile:false});
@@ -84,13 +114,22 @@ try {
   assert.equal(await evaluate('document.querySelectorAll("#collection-certificates details").length'),3);
   await evaluate('const issuer=document.querySelectorAll("#collection-certificates .repeat-fields input")[1]; issuer.value="Certificate QA"; issuer.dispatchEvent(new Event("input")); document.querySelector("[data-editor-tab=profile]").click()');
   await evaluate('const nameField=document.querySelector("#editor-profile input"); nameField.value="Portfolio QA"; nameField.dispatchEvent(new Event("input"));');
-  await evaluate(`const imgInput=document.querySelector("#editor-profile input[type=file]"); const c=document.createElement("canvas"); c.width=c.height=4; const blob=await new Promise(r=>c.toBlob(r)); const files=new DataTransfer(); files.items.add(new File([blob],"sample.png",{type:"image/png"})); imgInput.files=files.files; imgInput.dispatchEvent(new Event("change"));`.replace("const imgInput","(async()=>{const imgInput")+"})()");
-  await until(()=>evaluate('document.getElementById("profilePortrait").src.startsWith("data:image/jpeg")'));
+  for (const [index,id] of ["profilePortrait","auraPortrait"].entries()) {
+    await evaluate(`(async()=>{
+      const imgInput=document.querySelectorAll("#editor-profile input[type=file]")[${index}];
+      const c=document.createElement("canvas"); c.width=c.height=4;
+      const blob=await new Promise(r=>c.toBlob(r)), files=new DataTransfer();
+      files.items.add(new File([blob],"sample.png",{type:"image/png"}));
+      imgInput.files=files.files; imgInput.dispatchEvent(new Event("change"));
+    })()`);
+    await until(()=>evaluate(`document.getElementById("${id}").src.startsWith("data:image/jpeg")`));
+  }
   await evaluate('document.getElementById("saveContent").click()');
   await until(()=>evaluate('!document.getElementById("studioDialog").open'));
   await cmd("Page.reload");
   await until(()=>evaluate('document.body.classList.contains("ready") && document.title.startsWith("Portfolio QA")'));
   assert.ok(await evaluate('document.getElementById("profilePortrait").src.startsWith("data:image/jpeg")'));
+  assert.ok(await evaluate('document.getElementById("auraPortrait").src.startsWith("data:image/jpeg")'));
   assert.equal(await evaluate('document.querySelector(".certificate-issuer").textContent'),"Certificate QA");
   assert.equal((await (await fetch(origin+"/api/portfolio")).json()).content.profile.name,"Portfolio QA");
   assert.equal(JSON.parse(await readFile(path.join(temp,"portfolio.json"),"utf8")).profile.name,"Portfolio QA");
@@ -105,10 +144,20 @@ try {
   assert.ok(await evaluate('!document.querySelector(".gallery-controls").hidden && !document.getElementById("nextProject").disabled'));
   await evaluate('document.getElementById("nextProject").click()');
   await until(()=>evaluate('document.getElementById("projectsList").scrollLeft > 50'));
-  await evaluate('document.getElementById("mobileThemeToggle").click(); document.getElementById("replayPortrait").click()');
-  assert.ok(await evaluate('document.querySelector(".gallery-controls").hidden && document.querySelector(".hero__visual").classList.contains("portrait-playing")'));
+  await evaluate('document.getElementById("mobileThemeToggle").click()');
+  assert.ok(await evaluate('document.querySelector(".gallery-controls").hidden'));
   await cmd("Emulation.setEmulatedMedia",{features:[{name:"prefers-reduced-motion",value:"reduce"}]});
-  assert.ok(await evaluate('getComputedStyle(document.getElementById("replayPortrait")).display === "none" && getComputedStyle(document.querySelector(".ribbon-line")).animationName === "none"'));
+  await cmd("Page.reload");
+  await until(()=>evaluate('document.body.classList.contains("ready") && !document.getElementById("portraitToggle").hidden'));
+  await clickPortrait();
+  const midFade = () => evaluate('(()=>{const a=getComputedStyle(document.getElementById("auraPortrait"));return Number(a.opacity)>0 && Number(a.opacity)<1 && a.clipPath==="none" && getComputedStyle(document.querySelector(".portrait-sweep")).visibility==="hidden"})()');
+  await until(midFade);
+  await until(async()=>await label() === "Show Photo");
+  await delay(1300);
+  assert.equal(await label(),"Show Photo","An early click must cancel the automatic transition");
+  await clickPortrait();
+  await until(midFade);
+  await until(async()=>await label() === "Show Aura");
   for (const width of [320,390,768,1024,1440]) {
     await cmd("Emulation.setDeviceMetricsOverride",{width,height:900,deviceScaleFactor:1,mobile:false});
     if (!await evaluate('document.documentElement.scrollWidth <= innerWidth + 1')) {

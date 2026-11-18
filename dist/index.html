@@ -18,6 +18,8 @@
         } catch (_) {}
       })();
     </script>
+    <link rel="preload" as="image" href="assets/portrait-photo.webp" />
+    <link rel="preload" as="image" href="assets/portrait-aura.webp" />
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
@@ -106,29 +108,15 @@
         </div>
 
         <div class="hero__visual reveal" data-delay="3">
-          <svg class="ribbon ribbon-back" aria-hidden="true" viewBox="0 0 240 270" fill="none">
-            <defs>
-              <pattern id="ribbon-weave" width="16" height="16" patternUnits="userSpaceOnUse" patternTransform="rotate(-26)">
-                <rect width="16" height="16" class="weave-base"/>
-                <path d="M2 0v16m5-16v16" class="weave-stripe" stroke-width="3"/>
-              </pattern>
-            </defs>
-            <path class="ribbon-line ribbon-under" pathLength="100" d="M195 239C108 257 7 206 12 163S228 117 226 67C224 37 118 24 53 30"/>
-          </svg>
-          <div class="portrait-frame" id="portraitFrame">
-            <img
-              id="profilePortrait"
-              src="assets/portrait-placeholder.svg"
-              alt="Abstract portrait placeholder"
-              width="760"
-              height="920"
-            />
+          <div class="portrait-frame" id="portraitFrame" role="img" aria-label="Portrait of Christian Rey Adolfo">
+            <img id="profilePortrait" src="assets/portrait-photo.webp" alt="" width="600" height="600" />
+            <img id="auraPortrait" src="assets/portrait-aura.webp" alt="" width="600" height="600" />
+            <div class="portrait-sweep" aria-hidden="true"><img class="portrait-ribbon" src="assets/aura-ribbon.svg" alt="" /></div>
           </div>
-          <svg class="ribbon ribbon-front" aria-hidden="true" viewBox="0 0 240 270" fill="none">
-            <path class="ribbon-line" pathLength="100" d="M12 162C9 192 211 212 229 168C239 135 68 151 55 114"/>
-          </svg>
-          <div class="portrait-particles" aria-hidden="true"></div>
-          <button class="portrait-replay" id="replayPortrait" type="button" aria-label="Replay portrait animation" title="Replay portrait animation">↻</button>
+          <button class="portrait-toggle" id="portraitToggle" type="button" aria-controls="portraitFrame" hidden>
+            <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8h17m-4-4 4 4-4 4M21 16H4m4-4-4 4 4 4"/></svg>
+            <span><strong id="portraitAction">Show Aura</strong><small>Switch portrait</small></span>
+          </button>
         </div>
         <div class="hero__meta reveal" data-delay="5">
           <div><span>Based in</span><strong id="heroLocation">Philippines</strong></div>
@@ -386,6 +374,8 @@
     </template>
 
     <script src="content.js"></script>
+    <script src="vendor/gsap.min.js"></script>
+    <script src="portrait.js"></script>
     <script src="app.js"></script>
     <script src="studio.js"></script>
   </body>

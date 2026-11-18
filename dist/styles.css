@@ -600,17 +600,20 @@ main {
 }
 
 .portrait-frame {
+  position: relative;
+  aspect-ratio: 4 / 5;
   overflow: hidden;
   border: 1px solid var(--line);
-  border-radius: 12px;
+  border-radius: 4px;
   background: var(--surface);
 }
 
-.portrait-frame img {
+.portrait-frame > img {
+  position: absolute;
+  inset: 0;
   display: block;
   width: 100%;
-  height: auto;
-  aspect-ratio: 4 / 5;
+  height: 100%;
   object-fit: cover;
   object-position: center;
 }
@@ -1794,18 +1797,21 @@ main { margin-left: 0; }
 .hero .eyebrow::before { display: none; }
 .hero__actions .button { min-height: 44px; padding-inline: 16px; border-radius: 5px; font-weight: 700; }
 .hero__visual { position: relative; isolation: isolate; }
-html[data-theme="light"] .hero__visual { mix-blend-mode: multiply; }
-.portrait-frame { position: relative; overflow: hidden; border-radius: 4px; background: var(--surface); z-index: 1; }
-.ribbon { position: absolute; width: 134%; max-width: none; height: 120%; left: -17%; top: -10%; overflow: visible; pointer-events: none; }
-.ribbon-back { z-index: 0; }
-.ribbon-front { z-index: 2; }
-.weave-base { fill: #c3a855; }
-.weave-stripe { stroke: #315f5a; }
-.ribbon-line { stroke: url(#ribbon-weave); stroke-width: 12; stroke-linecap: round; stroke-dasharray: 38 112; stroke-dashoffset: -8; }
-.ribbon-under { stroke-width: 15; stroke-dasharray: 78 72; stroke-dashoffset: -3; }
-.portrait-particles { position: absolute; inset: -18%; z-index: 3; pointer-events: none; overflow: hidden; }
-.portrait-particles i { position: absolute; width: 3px; height: 3px; background: var(--accent-2); opacity: 0; }
-.portrait-replay { position: absolute; z-index: 4; right: -10px; bottom: -10px; width: 36px; height: 36px; border: 1px solid var(--line); border-radius: 50%; background: var(--surface); color: var(--ink); font-size: 1.15rem; cursor: pointer; }
+#auraPortrait, .portrait-sweep { visibility: hidden; }
+.portrait-sweep { position: absolute; inset: 0; pointer-events: none; }
+.portrait-ribbon { position: absolute; top: 0; left: -25%; width: 32%; max-width: none; height: 100%; }
+.portrait-toggle {
+  position: absolute; bottom: 5px; left: 5px; display: inline-flex; align-items: center; gap: 6px;
+  min-height: 38px; padding: 5px 9px; border: 1px solid #68685c; border-radius: 5px;
+  background: #1d1f20; color: #fafaf6; text-align: left; line-height: 1.12; cursor: pointer;
+}
+.portrait-toggle[hidden] { display: none; }
+.portrait-toggle svg { width: 14px; height: 14px; color: #ffdd65; flex: none; }
+.portrait-toggle strong, .portrait-toggle small { display: block; white-space: nowrap; }
+.portrait-toggle strong { font-size: 11px; font-weight: 650; }
+.portrait-toggle small { margin-top: 2px; font-size: 9px; color: #d4d4c8; }
+.portrait-toggle:hover { border-color: #d7c16c; }
+.portrait-toggle:focus-visible { outline: 2px solid #f9cf45; outline-offset: 2px; }
 .about { width: 100%; max-width: none; color: #f5f5f9; background: #181923; padding: clamp(48px,7vw,82px) max(5vw,calc((100% - 1060px)/2)); }
 .about .section-heading { margin-bottom: 32px; }
 .about .section-heading > p, .about .service-card p, .about #interestsGrid p { color: #c2c2ce; }
@@ -1869,6 +1875,8 @@ html[data-theme="dark"] .empty-state { grid-column: 1/-1; }
 @media (max-width: 680px) {
   .hero { grid-template-columns: minmax(0,1fr); width: 88%; padding-block: 100px 36px; gap: 24px; }
   .hero__visual { justify-self: start; margin-left: 7px; }
+  .hero__visual:has(.portrait-toggle:not([hidden])) { margin-bottom: 22px; }
+  .portrait-toggle { bottom: -22px; left: 0; gap: 4px; min-height: 44px; padding-inline: 6px; }
   .hero__meta { justify-content: flex-start; margin: 0; }
   .about { padding-inline: 6%; }
   .about .manifesto-card { min-height: 0; }
@@ -1879,27 +1887,6 @@ html[data-theme="dark"] .empty-state { grid-column: 1/-1; }
   .mobile-header__actions .text-button { padding-inline: 6px; }
 }
 @media (prefers-reduced-motion: no-preference) {
-  .portrait-playing .ribbon-line { animation: ribbon-sweep 2.8s cubic-bezier(.38,.03,.18,1) both; }
-  .portrait-playing .ribbon-under { animation: ribbon-orbit 2.6s cubic-bezier(.38,.03,.18,1) both; }
-  .portrait-playing .portrait-frame img { animation: develop-photo 2.2s ease-out both; }
-  html[data-theme="dark"] .portrait-playing .portrait-particles i { animation: disperse 1.8s var(--ease-out) var(--delay) both; }
   .reveal.project-card { transition-delay: var(--card-delay,0ms); }
-  @keyframes ribbon-sweep {
-    0% { stroke-dasharray: 0 160; stroke-dashoffset: 15; }
-    43% { stroke-dasharray: 65 120; stroke-dashoffset: -23; }
-    68% { stroke-dasharray: 26 120; stroke-dashoffset: -70; }
-    100% { stroke-dasharray: 38 112; stroke-dashoffset: -8; }
-  }
-  @keyframes ribbon-orbit {
-    0% { stroke-dasharray: 0 165; stroke-dashoffset: -65; }
-    52% { stroke-dasharray: 83 100; stroke-dashoffset: -18; }
-    100% { stroke-dasharray: 78 72; stroke-dashoffset: -3; }
-  }
-  @keyframes develop-photo { 0% { filter: grayscale(1) contrast(.88); } 100% { filter: none; } }
-  @keyframes disperse {
-    0% { opacity: 0; transform: translate(var(--from-x),var(--from-y)) scale(.5); }
-    24% { opacity: .8; } 100% { opacity: 0; transform: translate(0,0) rotate(85deg) scale(.65); }
-  }
 }
-@media (prefers-reduced-motion: reduce) { .portrait-replay, .portrait-particles { display: none; } }
-@media print { .signal-rail, .gallery-controls, .portrait-replay { display: none; } }
+@media print { .signal-rail, .gallery-controls, .portrait-toggle { display: none; } }

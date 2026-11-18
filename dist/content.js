@@ -13,7 +13,7 @@
       headline: "I design interfaces and build the systems behind them, from the first sketch to the final release.",
       roles: "web applications, design systems, digital products", location: "Philippines",
       availability: "Available for select projects", resume: "",
-      portrait: "assets/portrait-placeholder.svg", alt: "Illustrated studio portrait",
+      portrait: "assets/portrait-photo.webp", auraPortrait: "assets/portrait-aura.webp", alt: "Portrait of Christian Rey Adolfo",
       aboutTitle: "About my practice.", aboutIntro: "I work across interface design, front-end development and data visualization.",
       bio: "I start with the people who will use a product. A conversation, a paper sketch and a working prototype usually teach me more than a long brief.",
       footer: "Independent design & development"
@@ -59,9 +59,12 @@
       return ["https:", "http:"].includes(parsed.protocol) && !parsed.username && !parsed.password ? parsed.href : "";
     } catch { return ""; }
   };
-  const assetNames = new Set([defaults.profile.portrait, ...defaults.projects.map(p => p.image)]);
+  const assetNames = new Set([defaults.profile.portrait, defaults.profile.auraPortrait, "assets/portrait-placeholder.svg", ...defaults.projects.map(p => p.image)]);
   function validate(value) {
     function check(item, template, path) {
+      if (path === "profile.auraPortrait" && item === undefined) return defaults.profile.auraPortrait;
+      if (path === "profile.portrait" && item === "assets/portrait-placeholder.svg") return defaults.profile.portrait;
+      if (path === "profile.alt" && item === "Illustrated studio portrait") return "Portrait of " + value.profile.name;
       // Portfolios saved before certificates existed inherit the supplied documents.
       if (path === "certificates" && item === undefined) return copy(defaults.certificates);
       if (Array.isArray(template)) {
@@ -79,7 +82,7 @@
       }
       if (typeof item !== "string") throw Error("Expected text for " + path);
       const key = path.split(".").pop();
-      if (["portrait", "image"].includes(key)) {
+      if (["portrait", "auraPortrait", "image"].includes(key)) {
         if (assetNames.has(item) || (item.length < 1600000 && /^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/]+=*$/.test(item))) return item;
         throw Error("Please upload a supported image for " + path);
       }
