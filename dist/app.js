@@ -52,6 +52,9 @@ function tags(value, className = "tag") {
 function fill(id, items) {
   byId(id).replaceChildren(...items);
 }
+function usesThemePalette(appearance) {
+  return appearance.accent === defaults.appearance.accent && appearance.secondary === defaults.appearance.secondary;
+}
 function render(content) {
   current = content;
   const p = content.profile;
@@ -73,9 +76,12 @@ function render(content) {
   resume.rel = "noopener noreferrer";
   for (const [field, variable] of [["accent","--accent"],["secondary","--accent-2"]]) {
     const color = content.appearance[field];
-    if (/^#[a-f\d]{6}$/i.test(color)) {
+    if (!usesThemePalette(content.appearance) && /^#[a-f\d]{6}$/i.test(color)) {
       document.documentElement.style.setProperty(variable,color);
       document.documentElement.style.setProperty(variable + "-rgb",color.slice(1).match(/../g).map(x => parseInt(x,16)).join(","));
+    } else {
+      document.documentElement.style.removeProperty(variable);
+      document.documentElement.style.removeProperty(variable + "-rgb");
     }
   }
   fill("servicesGrid",content.services.map((s,index) => {
@@ -147,8 +153,11 @@ function renderProjects() {
   }));
   const projects = current.projects.filter(p => !filter || filter === p.category);
   byId("projectCount").textContent = projects.length + (projects.length === 1 ? " project" : " projects");
-  fill("projectsList",projects.length ? projects.map(p => {
-    const article = node("article","project-card"), media = node("div","project-card__media"), body = node("div","project-card__body");
+  const gallery = byId("projectsList");
+  gallery.querySelectorAll(".reveal").forEach(card=>revealObserver.unobserve(card));
+  fill("projectsList",projects.length ? projects.map((p,index) => {
+    const article = node("article","project-card reveal"), media = node("div","project-card__media"), body = node("div","project-card__body");
+    article.style.setProperty("--card-delay",(index % 2)*75+"ms");
     media.append(imageFor(p.image,p.alt,defaults.projects[0].image));
     const intro = node("div"), meta = node("div","project-card__meta");
     meta.append(node("span","project-card__type",p.category),node("span","project-card__year",p.year));
@@ -161,7 +170,26 @@ function renderProjects() {
     article.append(media,body);
     return article;
   }) : [node("p","empty-state","New projects will appear here.")]);
+  gallery.scrollLeft = 0;
+  gallery.querySelectorAll(".reveal").forEach(card=>revealObserver.observe(card));
+  updateGalleryControls();
 }
+function updateGalleryControls() {
+  const gallery = byId("projectsList");
+  const remaining = gallery.scrollWidth - gallery.clientWidth;
+  document.querySelector(".gallery-controls").hidden = remaining <= 2;
+  byId("previousProject").disabled = gallery.scrollLeft <= 2;
+  byId("nextProject").disabled = gallery.scrollLeft >= remaining - 2;
+}
+function stepGallery(direction) {
+  const gallery = byId("projectsList"), card = gallery.querySelector(".project-card");
+  if (!card) return;
+  gallery.scrollBy({left:direction*(card.offsetWidth+parseFloat(getComputedStyle(gallery).columnGap)),behavior:reduced.matches ? "instant" : "smooth"});
+}
+byId("previousProject").onclick = ()=>stepGallery(-1);
+byId("nextProject").onclick = ()=>stepGallery(1);
+byId("projectsList").addEventListener("scroll",updateGalleryControls,{passive:true});
+new ResizeObserver(updateGalleryControls).observe(byId("projectsList"));
 function openProject(p) {
   const hero = node("div","project-detail__hero"), body = node("div","project-detail__body");
   hero.append(imageFor(p.image,p.alt,defaults.projects[0].image));
@@ -185,7 +213,9 @@ function showRole() {
 function toggleTheme() {
   const theme = document.documentElement.dataset.theme === "dark" ? "light" : "dark";
   document.documentElement.dataset.theme = theme;
-  byId("themeToggle").setAttribute("aria-label","Switch to "+(theme === "dark" ? "light" : "dark")+" theme");
+  syncThemeButtons();
+  updateGalleryControls();
+  playPortrait();
   try { localStorage.setItem("orbitfolio.theme",theme); } catch {}
 }
 const commands = [
@@ -221,7 +251,13 @@ byId("commandDialog").onkeydown = event => {
 };
 document.addEventListener("keydown",e=>{ if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {e.preventDefault(); quickJump();} });
 byId("commandButton").onclick = byId("mobileCommandButton").onclick = quickJump;
-byId("themeToggle").onclick = toggleTheme;
+function syncThemeButtons() {
+  const dark = document.documentElement.dataset.theme === "dark", next = dark ? "light" : "dark";
+  for (const id of ["themeToggle","mobileThemeToggle"]) byId(id).setAttribute("aria-label","Switch to "+next+" theme");
+  byId("mobileThemeToggle").textContent = dark ? "Light ◑" : "Dark ◐";
+}
+byId("themeToggle").onclick = byId("mobileThemeToggle").onclick = toggleTheme;
+syncThemeButtons();
 document.querySelector("[data-close-project]").onclick = ()=>byId("projectDialog").close();
 for (const id of ["projectDialog","commandDialog"]) byId(id).onclick = e=>{ if (e.target === byId(id)) byId(id).close(); };
 byId("copyEmail").onclick = async ()=>{
@@ -250,6 +286,33 @@ const revealObserver = new IntersectionObserver(entries=>entries.forEach(e=>{
   if (e.isIntersecting) {e.target.classList.add("is-visible"); revealObserver.unobserve(e.target);}
 }),{threshold:0.03});
 all(".reveal").forEach(el=>revealObserver.observe(el));
+const portraitStage = document.querySelector(".hero__visual");
+const particles = document.querySelector(".portrait-particles");
+for (let index=0;index<18;index++) {
+  const particle = node("i");
+  const angle = index*2.4, radius = 28+(index%4)*6;
+  const x = Math.cos(angle)*radius, y = Math.sin(angle)*radius;
+  particle.style.left = (50+x)+"%";
+  particle.style.top = (50+y)+"%";
+  particle.style.setProperty("--from-x",(-x*1.2)+"px");
+  particle.style.setProperty("--from-y",(-y*1.2)+"px");
+  particle.style.setProperty("--delay",(index%5)*50+"ms");
+  particles.append(particle);
+}
+function playPortrait() {
+  if (reduced.matches) return;
+  portraitStage.classList.remove("portrait-playing");
+  void portraitStage.offsetWidth;
+  portraitStage.classList.add("portrait-playing");
+}
+byId("replayPortrait").onclick = playPortrait;
+const portraitObserver = new IntersectionObserver(entries=>{
+  if (entries.some(entry=>entry.isIntersecting)) {
+    playPortrait();
+    portraitObserver.disconnect();
+  }
+},{threshold:.35});
+portraitObserver.observe(portraitStage);
 function updateClock() {
   byId("localTime").textContent = new Intl.DateTimeFormat("en-PH",{hour:"numeric",minute:"2-digit", timeZone:"Asia/Manila"}).format(new Date())+" PHT";
 }

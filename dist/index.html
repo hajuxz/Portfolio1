@@ -69,6 +69,7 @@
     <header class="mobile-header">
       <a class="mobile-brand" href="#home" aria-label="Home"><span id="mobileInitials">YN</span><i></i></a>
       <div class="mobile-header__actions">
+        <button class="text-button" id="mobileThemeToggle" type="button" aria-label="Switch color theme">Theme ◐</button>
         <button class="text-button" id="mobileCommandButton" type="button">Quick jump</button>
         <button class="icon-button" type="button" data-open-editor aria-label="Edit portfolio">
           <svg aria-hidden="true" viewBox="0 0 24 24"><path d="m4 16-.8 4.8L8 20l11-11-4-4L4 16Zm9.8-9.8 4 4M13 20h8"/></svg>
@@ -102,13 +103,18 @@
               <span aria-hidden="true">↓</span>
             </a>
           </div>
-          <div class="hero__meta reveal" data-delay="6">
-            <div><span>Based in</span><strong id="heroLocation">Your City, Philippines</strong></div>
-            <div><span>Local time</span><strong id="localTime">--:-- PHT</strong></div>
-          </div>
         </div>
 
         <div class="hero__visual reveal" data-delay="3">
+          <svg class="ribbon ribbon-back" aria-hidden="true" viewBox="0 0 240 270" fill="none">
+            <defs>
+              <pattern id="ribbon-weave" width="16" height="16" patternUnits="userSpaceOnUse" patternTransform="rotate(-26)">
+                <rect width="16" height="16" class="weave-base"/>
+                <path d="M2 0v16m5-16v16" class="weave-stripe" stroke-width="3"/>
+              </pattern>
+            </defs>
+            <path class="ribbon-line ribbon-under" pathLength="100" d="M195 239C108 257 7 206 12 163S228 117 226 67C224 37 118 24 53 30"/>
+          </svg>
           <div class="portrait-frame" id="portraitFrame">
             <img
               id="profilePortrait"
@@ -118,6 +124,15 @@
               height="920"
             />
           </div>
+          <svg class="ribbon ribbon-front" aria-hidden="true" viewBox="0 0 240 270" fill="none">
+            <path class="ribbon-line" pathLength="100" d="M12 162C9 192 211 212 229 168C239 135 68 151 55 114"/>
+          </svg>
+          <div class="portrait-particles" aria-hidden="true"></div>
+          <button class="portrait-replay" id="replayPortrait" type="button" aria-label="Replay portrait animation" title="Replay portrait animation">↻</button>
+        </div>
+        <div class="hero__meta reveal" data-delay="5">
+          <div><span>Based in</span><strong id="heroLocation">Philippines</strong></div>
+          <div><span>Local time</span><strong id="localTime">--:-- PHT</strong></div>
         </div>
       </section>
 
@@ -161,7 +176,7 @@
         <header class="section-heading reveal">
           <div>
             <p class="kicker"><span>03</span> Selected work</p>
-            <h2 id="workTitle">Projects with a point of view.</h2>
+            <h2 id="workTitle">Selected projects</h2>
           </div>
           <p>Open a project to explore its brief, design decisions, and tools.</p>
         </header>
@@ -171,6 +186,10 @@
           <span id="projectCount" aria-live="polite"></span>
         </div>
         <div class="projects-list" id="projectsList"></div>
+        <div class="gallery-controls" aria-label="Browse projects" hidden>
+          <button type="button" id="previousProject" aria-label="Previous project">←</button>
+          <button type="button" id="nextProject" aria-label="Next project">→</button>
+        </div>
       </section>
 
       <section class="skills section" id="skills" data-section="skills" aria-labelledby="skillsTitle">
@@ -178,7 +197,7 @@
         <header class="section-heading reveal">
           <div>
             <p class="kicker"><span>04</span> Capability map</p>
-            <h2 id="skillsTitle">A flexible toolkit for real problems.</h2>
+            <h2 id="skillsTitle">Skills & tools</h2>
           </div>
           <p>The disciplines and tools I use for interface design, development, and data visualization.</p>
         </header>
@@ -204,7 +223,7 @@
         <header class="section-heading reveal">
           <div>
             <p class="kicker"><span>05</span> Journey log</p>
-            <h2 id="journeyTitle">Experience that compounds.</h2>
+            <h2 id="journeyTitle">Experience & achievements</h2>
           </div>
           <p>A living timeline of roles, education, milestones, and the lessons carried forward.</p>
         </header>

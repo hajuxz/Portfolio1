@@ -99,6 +99,16 @@ try {
   await evaluate('document.getElementById("projectDialog").close(); document.getElementById("themeToggle").click(); document.getElementById("commandButton").click()');
   assert.ok(await evaluate('document.getElementById("commandDialog").open'));
   await evaluate('document.getElementById("commandDialog").close()');
+  await cmd("Emulation.setDeviceMetricsOverride",{width:390,height:850,deviceScaleFactor:1,mobile:false});
+  await evaluate(`if (document.documentElement.dataset.theme === "light") document.getElementById("mobileThemeToggle").click();
+    document.querySelector(".filter-button").click();`);
+  assert.ok(await evaluate('!document.querySelector(".gallery-controls").hidden && !document.getElementById("nextProject").disabled'));
+  await evaluate('document.getElementById("nextProject").click()');
+  await until(()=>evaluate('document.getElementById("projectsList").scrollLeft > 50'));
+  await evaluate('document.getElementById("mobileThemeToggle").click(); document.getElementById("replayPortrait").click()');
+  assert.ok(await evaluate('document.querySelector(".gallery-controls").hidden && document.querySelector(".hero__visual").classList.contains("portrait-playing")'));
+  await cmd("Emulation.setEmulatedMedia",{features:[{name:"prefers-reduced-motion",value:"reduce"}]});
+  assert.ok(await evaluate('getComputedStyle(document.getElementById("replayPortrait")).display === "none" && getComputedStyle(document.querySelector(".ribbon-line")).animationName === "none"'));
   for (const width of [320,390,768,1024,1440]) {
     await cmd("Emulation.setDeviceMetricsOverride",{width,height:900,deviceScaleFactor:1,mobile:false});
     if (!await evaluate('document.documentElement.scrollWidth <= innerWidth + 1')) {

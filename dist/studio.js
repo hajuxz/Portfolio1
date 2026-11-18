@@ -93,9 +93,17 @@ function addField(owner, field) {
   else if (["accent","secondary"].includes(field)) input.type = "color";
   else if (field === "email") input.type = "email";
   else if (["resume","url","github","linkedin","website"].includes(field)) input.type = "url";
-  input.value = owner[field];
+  input.value = input.type === "color" && usesThemePalette(owner)
+    ? getComputedStyle(document.documentElement).getPropertyValue(field === "accent" ? "--accent" : "--accent-2").trim()
+    : owner[field];
   input.maxLength = 5000;
-  input.oninput = ()=>{ owner[field] = input.value; markChanged(); };
+  input.oninput = ()=>{
+    if (input.type === "color" && usesThemePalette(owner)) {
+      const other = field === "accent" ? "secondary" : "accent";
+      owner[other] = getComputedStyle(document.documentElement).getPropertyValue(other === "accent" ? "--accent" : "--accent-2").trim();
+    }
+    owner[field] = input.value; markChanged();
+  };
   label.append(input);
   return label;
 }
@@ -157,6 +165,9 @@ function rebuild() {
   else {
     const wrapper = section(({profile:"Profile & introduction",contact:"Contact details",appearance:"Portfolio colors"})[tab]);
     groups[tab].forEach(f=>wrapper.append(addField(draft[tab],f)));
+    if (tab === "appearance") wrapper.append(button("mini-button","Use theme colors",()=>{
+      draft.appearance = copy(defaults.appearance); markChanged(); rebuild();
+    }));
     panel.append(wrapper);
     if (tab === "profile") panel.append(repeatGroup("services"),repeatGroup("interests"));
   }
