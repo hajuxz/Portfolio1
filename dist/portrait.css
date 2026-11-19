@@ -1,163 +1,29 @@
-.intro-portrait {
-  --swap-ease: cubic-bezier(.22, 1, .36, 1);
-  --eye-x: 49.875%;
-  --eye-y: 19.25%;
-  position: absolute;
-  bottom: 0;
-  left: 61%;
-  width: min(66vw, 95svh);
-  aspect-ratio: 1;
-  /* The source photo has white space beneath the sitter. The hero crops the base. */
-  transform: translate(-50%, 19%);
-  overflow: visible;
-  isolation: isolate;
-  pointer-events: none;
+.sunglasses-hero {
+  position: relative;
+  background: #101010;
 }
-.portrait-layer, .portrait-art, .portrait-art > img, .portrait-canvas {
-  position: absolute; inset: 0; width: 100%; height: 100%;
-}
-.portrait-canvas { pointer-events: none; }
-.portrait-layer { opacity: 0; }
-.portrait-layer[data-state="shown"] { opacity: 1; }
-.intro-portrait.is-webgl .portrait-layer { visibility: hidden; }
-.intro-portrait.is-fading .portrait-layer {
-  will-change: opacity;
-  mix-blend-mode: plus-lighter;
-  transition: opacity var(--portrait-fade) linear;
-  transition-duration: var(--portrait-fade) !important; /* Override the site-wide reduced-motion reset. */
-}
-.portrait-art {
-  transform: translate(var(--x, 0px), var(--y, 0px)) scale(var(--scale, 1));
-  transform-origin: bottom center;
-}
-.portrait-art > img { display: block; object-fit: contain; object-position: bottom center; mix-blend-mode: multiply; }
-.portrait-art::before {
-  content: ""; position: absolute; left: 15%; top: 78.9%; width: 70%; height: 5.5%;
-  background: radial-gradient(ellipse, rgb(24 30 38 / .23), transparent 72%);
-}
-[data-portrait="aura"] .portrait-art::before, [data-lens-portrait="aura"] .portrait-art::before { top: 85.275%; }
-
-/* Only this small window travels. Its inner stage cancels the movement and
-   retains the same dimensions and per-image calibration as the base portrait. */
-.aura-lens {
-  position: absolute; z-index: 1; top: 0; left: 0;
-  width: calc(2 * var(--lens-half)); height: calc(2 * var(--lens-half));
-  transform-origin: 0 0;
-  transform: translate(var(--lens-x), var(--lens-y)) var(--lens-shape) translate(-50%, -50%);
-  opacity: var(--lens-alpha, 0);
-  will-change: transform, opacity;
-}
-.aura-lens, .aura-lens * { pointer-events: none; }
-.aura-lens[hidden], .is-debug .aura-lens { display: none; }
-.aura-lens-mask {
-  position: absolute; inset: 0; overflow: hidden;
-  --mask: radial-gradient(circle at center, #000 0 var(--lens-r), transparent calc(var(--lens-r) + var(--lens-soft)));
-  -webkit-mask-image: var(--mask);
-  mask-image: var(--mask);
-}
-.aura-lens-register {
-  position: absolute; left: 0; top: 0;
-  width: var(--stage-width); height: var(--stage-height);
-  isolation: isolate; transform-origin: 0 0;
-  transform: translate(var(--lens-half), var(--lens-half)) var(--lens-inverse)
-    translate(calc(0px - var(--lens-x)), calc(0px - var(--lens-y)));
-  will-change: transform;
-}
-.aura-lens-image {
-  position: absolute; inset: 0;
-  background: #fff; opacity: 0; mix-blend-mode: plus-lighter;
-  transition: opacity var(--lens-swap, 0s) cubic-bezier(.22, 1, .36, 1);
-}
-.aura-lens[data-reveal="aura"] [data-lens-portrait="aura"],
-.aura-lens[data-reveal="normal"] [data-lens-portrait="normal"] { opacity: 1; }
-.aura-lens::after {
-  content: ""; position: absolute; inset: 0; pointer-events: none;
-  opacity: var(--lens-glow);
-  background: radial-gradient(circle, transparent var(--lens-r),
-    var(--lens-accent) calc(var(--lens-r) + var(--lens-soft) * .39),
-    transparent calc(var(--lens-r) + var(--lens-soft)));
-}
-@media (prefers-reduced-motion: reduce), (hover: none), (pointer: coarse), print {
-  .aura-lens { display: none; }
-}
-.intro-portrait.is-debug .portrait-layer {
-  opacity: .5; transform: none; filter: none; mix-blend-mode: plus-lighter; transition: none;
-}
-.is-debug .portrait-art::before { opacity: 0; }
-.intro-portrait.is-debug::before, .intro-portrait.is-debug::after {
-  content: ""; position: absolute; z-index: 2; background: #b21d60; pointer-events: none;
-}
-.intro-portrait.is-debug::before { left: 50%; top: 0; bottom: 0; width: 1px; }
-.intro-portrait.is-debug::after { left: 0; right: 0; top: var(--eye-y); height: 1px; }
-
-.intro-switch {
-  position: absolute; z-index: 3; left: var(--gutter, 5vw); bottom: clamp(22px,5vh,56px);
-  display: inline-flex; align-items: center; gap: 12px;
-  min-height: 44px; padding: 0; border: 0; color: var(--cover-ink, #171d30);
-  background: transparent; text-align: left; cursor: pointer;
-}
-.intro-switch[hidden] { display: none; }
-.intro-switch-icon { display: grid; place-items: center; width: 43px; height: 43px; border: 1px solid #a6abb0; border-radius: 50%; }
-.intro-switch:hover .intro-switch-icon { border-color: currentColor; background: #f5f6f6; }
-.intro-switch svg {
-  width: 17px; height: 17px; fill: none; stroke: currentColor;
-  stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round;
-  transform: rotate(var(--turn, 0deg)); transition: transform var(--swap-duration, 0s) cubic-bezier(.22,1,.36,1);
-}
-.portrait-labels { display: grid; overflow: hidden; white-space: nowrap; }
-.portrait-labels strong { grid-area: 1/1; font-size: 11px; font-weight: 700; letter-spacing: .1em; line-height: 1.45; text-transform: uppercase; }
-.portrait-old-label { opacity: 0; }
-.intro-switch small { display: block; white-space: nowrap; color: var(--cover-muted, #535b66); font-size: 11px; }
-.intro-switch.is-changing:not(.simple-swap) #portraitAction { animation: portrait-label-in var(--labelIn) var(--labelDelay) both; }
-.intro-switch.is-changing:not(.simple-swap) .portrait-old-label { animation: portrait-label-out var(--labelOut) both; }
-.intro-switch.simple-swap svg { transform: none; transition: none; }
-@keyframes portrait-label-out { to { opacity: 0; transform: translateY(-100%); } from { opacity: 1; } }
-@keyframes portrait-label-in { from { opacity: 0; transform: translateY(100%); } to { opacity: 1; transform: none; } }
-
-@media (max-width: 820px) {
-  .intro-portrait {
-    position: relative; left: auto; bottom: auto;
-    grid-column: 1/-1; grid-row: 2; justify-self: center; align-self: end;
-    width: min(100%, 50svh, 530px);
-    /* Enlarge the artwork without contributing extra width to the hero's grid. */
-    transform: translateY(27.55%) scale(1.45);
-    transform-origin: bottom center;
-  }
-  /* Keep the existing controls legible in front of the full-bleed portrait. */
-  .intro-hero::after {
-    content: ""; z-index: 1; grid-row: 3; grid-column: 1/-1; align-self: stretch;
-    margin: -8px calc(-1 * var(--gutter)) -22px; background: white; pointer-events: none;
-  }
-  .intro-switch { position: static; grid-row: 3; grid-column: 1; justify-self: start; gap: 8px; }
-}
-@media (max-width: 380px) { .intro-switch-icon { width: 34px; height: 34px; } }
-@media print { .intro-switch { display: none; } }
 #sunglassesSequence {
-  display: none;
+  display: block;
   position: sticky;
   top: 0;
   width: 100%;
   height: 100vh;
-  height: 100svh;
+  height: 100dvh;
   object-fit: contain;
   background: #101010 url("assets/sunglasses/first.jpg") center / contain no-repeat;
 }
-body[data-view="home"] #sunglassesSequence { display: block; }
-/* Native scroll distance beneath the pinned frame, with no spacer in the DOM. */
-body[data-view="home"] #main-content::after {
+/* The same Home panel supplies the scroll distance and bounds the sticky frame. */
+.sunglasses-hero::after {
   content: "";
   display: block;
   height: max(1500px, 240svh);
   pointer-events: none;
 }
-body[data-view="home"] #main-content:has(#sunglassesSequence[data-still])::after { display: none; }
-#sunglassesSequence[data-still] { position: static; height: auto; }
+.sunglasses-hero:has([data-still])::after { display: none; }
 @media (prefers-reduced-motion: reduce), print {
-  body[data-view="home"] #main-content::after { display: none; }
+  .sunglasses-hero::after { display: none; }
   #sunglassesSequence {
     position: static;
-    height: auto;
-    aspect-ratio: 16 / 9;
     background-image: url("assets/sunglasses/last.jpg");
   }
 }

@@ -2,7 +2,7 @@
 
 (() => {
   const canvas = document.getElementById("sunglassesSequence");
-  const hero = document.getElementById("home"), main = hero.parentElement;
+  const hero = document.getElementById("home");
   const motion = matchMedia("(prefers-reduced-motion: reduce)");
   const context = canvas.getContext("2d");
   if (!context) { canvas.dataset.still = ""; return; }
@@ -63,9 +63,9 @@
     if (!active || !frames?.length) return;
     const last = frames.length - 1;
     if (measure) {
-      const start = hero.getBoundingClientRect().bottom;
-      const travel = main.getBoundingClientRect().bottom - start - canvas.clientHeight;
-      const next = last * Math.max(0,Math.min(1,-start / Math.max(1,travel)));
+      const bounds = hero.getBoundingClientRect();
+      const travel = Math.max(1,bounds.height - canvas.clientHeight);
+      const next = last * Math.max(0,Math.min(1,-bounds.top / travel));
       if (next !== target) direction = Math.sign(next-target);
       target = next;
       measure = false;

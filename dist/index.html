@@ -19,9 +19,6 @@
         document.querySelector('meta[name="theme-color"]').content = NAV_CONFIG.colors[theme].bg;
       })();
     </script>
-    <link rel="preload" as="image" href="assets/portrait-normal.jpg" fetchpriority="high" />
-    <link rel="preload" as="image" href="assets/portrait-aura.jpg" />
-    <link rel="preload" as="font" type="font/woff2" href="assets/anton/anton-latin-400-normal.woff2" crossorigin />
     <link rel="stylesheet" href="styles.css" />
     <link rel="stylesheet" href="portrait.css" />
     <link rel="stylesheet" href="navigation.css" />
@@ -45,41 +42,10 @@
       </footer>
     </aside>
     <main id="main-content">
-      <section class="intro-hero" id="home" data-view="home" aria-labelledby="heroName">
-        <div class="intro-copy">
-          <h1 class="intro-name" id="heroName" tabindex="-1"><span>Christian Rey</span> <span>Adolfo</span></h1>
-          <ul class="intro-details">
-            <li><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M20 10c0 5-8 11-8 11S4 15 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="2.6"/></svg><span id="heroLocation">Bukidnon, Philippines</span></li>
-            <li><svg aria-hidden="true" viewBox="0 0 24 24"><path d="m2 9 10-5 10 5-10 5L2 9Zm4 2v6c4 3 8 3 12 0v-6m4-2v7"/></svg><span id="heroEducation">IT Student at Bukidnon State University</span></li>
-            <li><svg aria-hidden="true" viewBox="0 0 24 24"><path d="m7 7-5 5 5 5m10-10 5 5-5 5m-4-14-2 18"/></svg><span id="heroFocus">Web Development, Full-Stack and UI/UX</span></li>
-          </ul>
-        </div>
-
-        <div class="intro-portrait" id="portraitFrame" role="img" aria-label="Portrait of Christian Rey Adolfo">
-          <div class="portrait-layer" data-portrait="normal" data-state="shown">
-            <div class="portrait-art"><img id="profilePortrait" src="assets/portrait-normal.jpg" alt="" width="800" height="800" /></div>
-          </div>
-          <div class="portrait-layer" data-portrait="aura">
-            <div class="portrait-art"><img id="auraPortrait" src="assets/portrait-aura.jpg" alt="" width="800" height="800" /></div>
-          </div>
-          <canvas class="portrait-canvas" aria-hidden="true" hidden></canvas>
-        </div>
-
-        <button class="intro-switch" id="portraitToggle" type="button" aria-controls="portraitFrame" hidden>
-          <span class="intro-switch-icon"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M3 8h17m-4-4 4 4-4 4M21 16H4m4-4-4 4 4 4"/></svg></span>
-          <span><span class="portrait-labels"><strong id="portraitAction">Show Aura</strong><strong class="portrait-old-label" aria-hidden="true"></strong></span><small>Switch portrait</small></span>
-        </button>
-
-        <aside class="intro-meta" aria-label="Time and availability">
-          <div><span>Local time</span><strong id="localTime">Philippine time</strong></div>
-          <div><span>Status</span><strong class="intro-status" id="heroAvailability">Available for select projects</strong></div>
-          <a id="resumeLink" hidden target="_blank" rel="noopener noreferrer">View résumé ↗</a>
-          <button class="intro-edit" type="button" data-open-editor>Edit portfolio</button>
-        </aside>
+      <section id="home" class="sunglasses-hero" data-view="home" aria-labelledby="homeTitle">
+        <h1 id="homeTitle" class="sr-only" tabindex="-1">Christian Rey Adolfo</h1>
+        <canvas id="sunglassesSequence" width="1280" height="720" role="img" aria-label="Portrait sequence of a man putting on sunglasses"></canvas>
       </section>
-
-
-      <canvas id="sunglassesSequence" width="1280" height="720" role="img" aria-label="Portrait sequence of a man putting on sunglasses"></canvas>
 
       <section class="about section" id="about" data-view="about" hidden aria-labelledby="aboutTitle">
         <header class="section-heading reveal">
@@ -295,8 +261,6 @@
     </template>
 
     <script src="content.js"></script>
-    <script src="vendor/gsap.min.js"></script>
-    <script src="portrait.js"></script>
     <script src="workspace-icons.js"></script>
     <script src="navigation.js"></script>
     <script src="app.js"></script>

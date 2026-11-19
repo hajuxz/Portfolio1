@@ -105,18 +105,11 @@ function render(content) {
   const words = p.name.trim().split(/\s+/);
   const initials = [words[0]?.[0], words.length > 1 ? words.at(-1)[0] : ""].join("").toUpperCase();
   for (const id of ["mobileInitials","signatureInitials"]) byId(id).textContent = initials;
-  const surname = words.at(-1);
-  const nameLines = [words.slice(0,-1).join(" "), surname].filter(Boolean);
-  byId("heroName").replaceChildren(...nameLines.map(line => node("span","",line)));
-  byId("heroName").setAttribute("aria-label", p.name);
+  byId("homeTitle").textContent = p.name;
   portfolioNav.setProfile(p, content.contact);
   document.querySelector('meta[name="description"]').content = p.headline;
-  const values = {heroAvailability:p.availability, heroEducation:p.eyebrow, heroFocus:p.roles, heroLocation:p.location, aboutTitle:p.aboutTitle, aboutIntro:p.aboutIntro, aboutBio:p.bio, contactIntro:content.contact.intro};
+  const values = {aboutTitle:p.aboutTitle, aboutIntro:p.aboutIntro, aboutBio:p.bio, contactIntro:content.contact.intro};
   Object.entries(values).forEach(([id,value]) => byId(id).textContent = value);
-  portraitSwitch.setSources(p);
-  const resume = byId("resumeLink");
-  resume.hidden = !safeURL(p.resume);
-  if (resume.hidden) resume.removeAttribute("href"); else resume.href = p.resume;
   for (const [field, variable] of [["accent","--accent"],["secondary","--accent-2"]]) {
     const color = content.appearance[field];
     if (!usesThemePalette(content.appearance) && /^#[a-f\d]{6}$/i.test(color)) {
@@ -244,12 +237,7 @@ function openProject(p) {
 document.addEventListener("portfolio:theme",updateGalleryControls);
 const commands = [
   ...portfolioNav.views.map(view => ({label:view.label,icon:view.icon,action:()=>portfolioNav.go(view.id)})),
-  {label:"Toggle dark mode",icon:"moon",action:portfolioNav.toggleTheme},
-  {label:"Switch portrait",icon:"swap",action:async()=>{
-    portraitSwitch.cancelIntro();
-    await portfolioNav.go("home");
-    if (!byId("home").hidden) await portraitSwitch.switchManually();
-  }}
+  {label:"Toggle dark mode",icon:"moon",action:portfolioNav.toggleTheme}
 ];
 const commandDialog = byId("commandDialog"), commandInput = byId("commandInput");
 let matches = [], selected = 0;
@@ -336,8 +324,3 @@ byId("contactForm").onsubmit = e=>{
   const form = new FormData(e.target), body = form.get("message")+"\n\n"+form.get("name")+"\n"+form.get("email");
   location.href = "mailto:"+encodeURIComponent(current.contact.email)+"?subject="+encodeURIComponent(form.get("subject"))+"&body="+encodeURIComponent(body);
 };
-function updateClock() {
-  byId("localTime").textContent = new Intl.DateTimeFormat("en-PH",{hour:"numeric",minute:"2-digit", timeZone:"Asia/Manila"}).format(new Date())+" PHT";
-}
-updateClock(); setInterval(updateClock,30000);
-

@@ -138,36 +138,15 @@ main > .section[data-view] {
 }
 @media print { .workspace-sidebar,.shell-pill,.drawer-backdrop { display: none; } .sidebar-expanded main { margin: 0; } }
 
-.intro-hero { --cover-ink: var(--text); --cover-muted: var(--secondary); color: var(--text); background: var(--bg); }
-.intro-details svg { color: var(--focus); }
-.intro-meta > div, .intro-switch-icon { border-color: var(--nav-border); }
-.intro-status::before { background: var(--status); }
-.intro-switch:hover .intro-switch-icon { background: var(--active-pill); }
-.intro-hero::after, .aura-lens-image { background: var(--bg); }
-.portrait-art::before { background: radial-gradient(ellipse, var(--portrait-shadow), transparent 72%); }
-[data-theme="dark"] .portrait-art::before { height: 8%; filter: blur(8px); }
-[data-theme="dark"] .portrait-art > img { mix-blend-mode: normal; }
-[data-theme="dark"] .portrait-art > img[src="assets/portrait-normal.jpg"] { --matte: url("assets/portrait-normal-mask.png"); }
-[data-theme="dark"] .portrait-art > img[src="assets/portrait-aura.jpg"] { --matte: url("assets/portrait-aura-mask.png"); }
-[data-theme="dark"] .portrait-art > img {
-  -webkit-mask: var(--matte,none) bottom center / contain no-repeat;
-  mask: var(--matte,none) bottom center / contain no-repeat;
-}
-
 .section .timeline-shell { display: block; padding: 0; background: transparent; border: 0; box-shadow: none; }
 .section .timeline-item { background: var(--card-bg); border: 1px solid var(--nav-border); border-radius: 18px; padding: 22px; }
 .section .timeline-item::before { display: none; }
 .section .timeline-item h3 { font-family: var(--font-body); font-size: 18px; letter-spacing: -.015em; }
 .section .timeline-item__type { color: var(--secondary); }
 .social-list:empty { display: none; }
-.intro-hero::before { content: ""; pointer-events: none; position: absolute; inset: 0; z-index: -1; background: radial-gradient(circle,var(--grid-dot) .85px,transparent 1px) 10px 10px / 24px 24px; mask-image: linear-gradient(90deg,black,transparent 44%,transparent 80%,black); }
 @media (min-width: 1024px) {
   main { container-type: inline-size; }
-  .sidebar-expanded .intro-hero { --gutter: clamp(22px,4cqw,76px); }
-  .sidebar-expanded .intro-name { font-size: clamp(46px,7.5cqw,146px); }
-  .sidebar-expanded .intro-portrait { width: min(66cqw,95svh); }
 }
 @media (width < 1024px) {
-  .section .filter-button,.intro-hero .intro-edit,.contact-direct button,.social-list a { min-height: 44px; }
-  .intro-switch { min-height: 44px; }
+  .section .filter-button,.contact-direct button,.social-list a { min-height: 44px; }
 }

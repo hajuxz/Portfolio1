@@ -124,7 +124,6 @@ const portfolioNav = (() => {
     document.body.dataset.view = id;
     updateShell();
     updateTitle();
-    portraitSwitch.setHeroVisible(id === "home");
     window.scrollTo({top:0,behavior:"instant"});
     if (focus && !document.querySelector("dialog[open]")) el(id).querySelector("h1").focus({preventScroll:true});
     document.dispatchEvent(new CustomEvent("portfolio:view",{detail:id}));
@@ -149,8 +148,14 @@ const portfolioNav = (() => {
         await animatePanel(el(current),[{opacity:1,transform:"none"},{opacity:0,transform:"translateY(-8px)"}],config.timing.exit);
         if (ticket !== sequence) return;
       }
+      const firstVisit = !current;
       show(id);
-      await animatePanel(el(id),[{opacity:0,transform:"translateY(12px)",filter:"blur(3px)"},{opacity:1,transform:"none",filter:"blur(0)"}],config.timing.enter);
+      if (id === "home") {
+        // A translated hash target scrolls the document before the first frame.
+        if (!firstVisit) await animatePanel(el(id),[{opacity:0},{opacity:1}],config.timing.enter);
+      } else {
+        await animatePanel(el(id),[{opacity:0,transform:"translateY(12px)",filter:"blur(3px)"},{opacity:1,transform:"none",filter:"blur(0)"}],config.timing.enter);
+      }
     })();
     return pending;
   }

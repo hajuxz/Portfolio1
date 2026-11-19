@@ -62,143 +62,6 @@ try {
   };
   await cmd("Runtime.enable");
   await cmd("Page.enable");
-  await cmd("Page.addScriptToEvaluateOnNewDocument",{source:`
-    if (location.search==="?no-webgl") {
-      const get = HTMLCanvasElement.prototype.getContext;
-      HTMLCanvasElement.prototype.getContext=function(type,options){return type.startsWith("webgl") ? null : get.call(this,type,options);};
-    }
-    window.shardDraws = [];
-    window.releasedGPU={deleteTexture:0,deleteBuffer:0,deleteProgram:0};
-    for (const method of Object.keys(releasedGPU)) {
-      const original=WebGL2RenderingContext.prototype[method];
-      WebGL2RenderingContext.prototype[method]=function(resource){
-        if (this.canvas.classList.contains("portrait-canvas") && resource) releasedGPU[method]++;
-        return original.call(this,resource);
-      };
-    }
-    document.addEventListener("DOMContentLoaded",()=>{window.firstPortraitLabel=document.getElementById("portraitAction")?.textContent;});
-    const draw = WebGL2RenderingContext.prototype.drawArraysInstanced;
-    WebGL2RenderingContext.prototype.drawArraysInstanced = function(mode, first, vertices, instances) {
-      if (this.canvas.classList.contains("portrait-canvas")) shardDraws.push(instances);
-      return draw.call(this,mode,first,vertices,instances);
-    };
-    if (location.hash === "#burst-test") new MutationObserver(()=>{
-      const tl=window.gsap?.globalTimeline.getChildren().find(t=>t.data==="portrait-burst");
-      if (tl && tl !== window.sampledBurst) {window.sampledBurst=tl;tl.pause().progress(.22);}
-    }).observe(document,{childList:true,subtree:true,attributes:true,attributeFilter:["class"]});
-  `});
-  await cmd("Page.navigate",{url:origin+"/#burst-test"});
-  await until(()=>evaluate('document.body.classList.contains("ready") && !document.getElementById("portraitToggle").hidden'));
-  assert.equal(await evaluate('firstPortraitLabel'),"Show Aura");
-  assert.equal(await evaluate('document.querySelectorAll("link[rel=preload][as=image]").length'),2);
-  const label = () => evaluate('document.getElementById("portraitAction").textContent');
-  const clickPortrait = () => evaluate('document.getElementById("portraitToggle").click()');
-  const settled = () => evaluate('!document.getElementById("portraitFrame").classList.contains("is-changing")');
-  const pressD = () => evaluate('document.dispatchEvent(new KeyboardEvent("keydown",{key:"d",bubbles:true}))');
-  const checkTexture = async (id,x,y) => {
-    const error=await evaluate(`(()=>{
-      sampledBurst.progress(.01).progress(0);
-      const gpu=document.querySelector(".portrait-canvas");
-      const sample=document.createElement("canvas"), ref=document.createElement("canvas");
-      const width=sample.width=ref.width=gpu.width, height=sample.height=ref.height=gpu.height;
-      const a=sample.getContext("2d"),b=ref.getContext("2d");
-      a.drawImage(gpu,0,0);
-      b.fillStyle="white";b.fillRect(0,0,width,height);
-      b.drawImage(document.getElementById("${id}"),width*${x},height*${y},width,height);
-      const actual=a.getImageData(0,0,width,height).data,expected=b.getImageData(0,0,width,height).data;
-      let difference=0;
-      for(let i=0;i<actual.length;i+=4) difference+=Math.abs(actual[i]-expected[i]);
-      sampledBurst.progress(.22);
-      return difference/(width*height);
-    })()`);
-    assert.ok(error<6,"GPU image differs from the registered portrait: "+error);
-  };
-  await until(()=>evaluate('window.sampledBurst?.duration()===.5 && !document.querySelector(".portrait-canvas").hidden'));
-  await checkTexture("profilePortrait",0,0);
-  assert.ok(await evaluate('shardDraws.includes(96) && document.querySelectorAll("#portraitFrame canvas").length===1'));
-  assert.ok(await evaluate('performance.now() - performance.getEntriesByType("navigation")[0].loadEventEnd >= 1000'));
-  await clickPortrait();
-  assert.equal(await label(),"Show Normal","Rapid clicks must not reverse a running transition");
-  await evaluate('sampledBurst.resume();true');
-  await until(settled);
-  await clickPortrait();
-  await until(()=>evaluate('window.sampledBurst?.duration()===.7 && sampledBurst.paused()'));
-  await checkTexture("auraPortrait",-.01375,-.06375);
-  await evaluate('portfolioNav.go("work")');
-  await delay(250);
-  const offscreenDraws=await evaluate('shardDraws.length');
-  await delay(200);
-  assert.equal(await evaluate('shardDraws.length'),offscreenDraws);
-  await evaluate('portfolioNav.go("home")');
-  await until(settled);
-  assert.equal(await label(),"Show Aura");
-  await pressD();
-  assert.ok(await evaluate('[...document.querySelectorAll(".portrait-layer")].every(el=>+getComputedStyle(el).opacity===.5)'));
-  await clickPortrait();
-  assert.equal(await label(),"Show Aura");
-  await pressD();
-  assert.ok(await evaluate('getComputedStyle(document.querySelector("[data-portrait=aura]")).opacity==="0"'));
-  await evaluate('portfolioNav.go("about")');
-  await evaluate('document.getElementById("portraitFrame").remove()');
-  await until(()=>evaluate('document.getElementById("portraitToggle").hidden && Object.values(releasedGPU).every(count=>count>0)'));
-  console.log("Desktop WebGL bursts in both directions, instanced draws, offscreen pause, lock and debug overlay passed.");
-  await cmd("Emulation.setDeviceMetricsOverride",{width:1280,height:800,deviceScaleFactor:1,mobile:false});
-  await cmd("Page.navigate",{url:origin+"/?lens-test"});
-  await until(async()=>await label()==="Show Normal" && await settled());
-  const move = (x,y) => cmd("Input.dispatchMouseEvent",{type:"mouseMoved",x,y});
-  const lensHidden = () => evaluate('document.querySelector(".aura-lens").hidden');
-  const point = await evaluate(`(()=>{
-    const b=document.getElementById("portraitFrame").getBoundingClientRect();
-    return {x:Math.round(b.left+b.width*.50),y:Math.round(b.top+b.height*.195),
-      lower:Math.round(b.top+b.height*.67),left:b.left};
-  })()`);
-  const patchPixels = async (x,y) => {
-    const {data} = await cmd("Page.captureScreenshot",{format:"png",clip:{x:x-7,y:y-7,width:14,height:14,scale:1}});
-    return evaluate(`(async()=>{
-      const img=new Image();img.src="data:image/png;base64,${data}";await img.decode();
-      const c=document.createElement("canvas").getContext("2d");c.drawImage(img,0,0);
-      return [...c.getImageData(0,0,14,14).data];
-    })()`);
-  };
-  const diff = (a,b) => a.reduce((sum,v,i)=>sum+Math.abs(v-b[i]),0)/a.length;
-  const auraEye = await patchPixels(point.x,point.y);
-  await clickPortrait(); await until(settled);
-  const normalEye = await patchPixels(point.x,point.y), normalTorso = await patchPixels(point.x,point.lower);
-  assert.ok(diff(auraEye,normalEye)>12,"The eye sample must distinguish the two portraits");
-  await move(point.left-50,point.y);
-  await until(async()=>!await lensHidden());
-  await move(point.x,point.y);
-  await until(()=>evaluate('Number(document.querySelector(".aura-lens").style.getPropertyValue("--lens-alpha"))===1'));
-  await until(()=>evaluate('Math.abs(parseFloat(document.querySelector(".aura-lens").style.getPropertyValue("--lens-x"))-document.getElementById("portraitFrame").clientWidth*.5)<2'));
-  assert.ok(diff(await patchPixels(point.x,point.y),auraEye)<4,"Lens core must show the registered alternate eye");
-  assert.ok(diff(await patchPixels(point.x,point.lower),normalTorso)<2,"Outside the aperture the base must stay visible");
-  const moving = await evaluate(`(async()=>{
-    const lens=document.querySelector(".aura-lens"), base=document.getElementById("auraPortrait");
-    const twin=lens.querySelector('[data-lens-portrait="aura"] img');
-    const start=parseFloat(lens.style.getPropertyValue("--lens-x"));
-    document.dispatchEvent(new PointerEvent("pointermove",{clientX:${point.x+120},clientY:${point.y+55},pointerType:"mouse"}));
-    await new Promise(requestAnimationFrame);
-    const shifted=parseFloat(lens.style.getPropertyValue("--lens-x"))-start;
-    const original=base.getBoundingClientRect(), overlay=twin.getBoundingClientRect();
-    return {shifted,glow:+lens.style.getPropertyValue("--lens-glow"),
-      drift:Math.max(Math.abs(original.left-overlay.left),Math.abs(original.top-overlay.top),
-        Math.abs(original.width-overlay.width),Math.abs(original.height-overlay.height))};
-  })()`);
-  assert.ok(moving.shifted>0 && moving.shifted<120 && moving.glow>.35 && moving.drift<.15,
-    "The aperture should lag and brighten without shifting the moving eye: "+JSON.stringify(moving));
-  await move(point.x+1,point.y);
-  await clickPortrait(); await until(settled);
-  assert.ok(diff(await patchPixels(point.x,point.y),normalEye)<4,"Stationary lens must reverse when the base swaps");
-  await pressD(); assert.equal(await lensHidden(),true); await pressD();
-  await move(point.x+5,point.y); await until(async()=>!await lensHidden());
-  await delay(310);
-  await move(2,2);
-  await until(()=>evaluate('(()=>{const lens=document.querySelector(".aura-lens");return !lens.hidden && +lens.style.getPropertyValue("--lens-alpha")<.95;})()'));
-  await until(lensHidden);
-  const idleStyle = await evaluate('document.querySelector(".aura-lens").getAttribute("style")');
-  await delay(150);
-  assert.equal(await evaluate('document.querySelector(".aura-lens").getAttribute("style")'),idleStyle);
-  console.log("Lens proximity, registration in both directions, outer pixels, debug, exit and idle state passed.");
   // Record the original JPEG index actually painted, including reverse scrubs.
   await cmd("Page.addScriptToEvaluateOnNewDocument",{source:`
     window.sequenceDraws = [];
@@ -214,9 +77,13 @@ try {
   for (const width of [1280,390]) {
     await cmd("Emulation.setDeviceMetricsOverride",{width,height:800,deviceScaleFactor:1,mobile:false});
     await until(()=>evaluate('document.body.classList.contains("ready") && window.sunglassesFrames?.length === 161'));
+    try { await until(()=>evaluate('!scrollY && Math.abs(sunglassesSequence.getBoundingClientRect().top)<1 && sequenceDraws.at(-1)===0')); }
+    catch { assert.fail(JSON.stringify(await evaluate('({width:innerWidth,y:scrollY,stage:sunglassesSequence.getBoundingClientRect().toJSON(),home:home.getBoundingClientRect().toJSON(),frames:sequenceDraws.slice(-8),focus:document.activeElement.id,hash:location.hash})'))); }
+    assert.ok(await evaluate('home.contains(sunglassesSequence) && document.querySelectorAll("canvas").length===1 && !document.querySelector("#portraitFrame,#portraitToggle,.intro-copy,.intro-meta")'));
+    assert.ok(await evaluate('!performance.getEntriesByType("resource").some(r=>/portrait-normal|portrait-aura|three\\.module|gsap\\.min/.test(r.name))'));
     for (const fraction of [0,.5,1,.25,0]) {
       const previous = await evaluate('({index:sequenceDraws.at(-1),count:sequenceDraws.length})');
-      await evaluate(`(()=>{const start=scrollY+home.getBoundingClientRect().bottom; const end=document.documentElement.scrollHeight-innerHeight; scrollTo({top:start+(end-start)*${fraction},behavior:"instant"})})()`);
+      await evaluate(`(()=>{const end=document.documentElement.scrollHeight-innerHeight; scrollTo({top:end*${fraction},behavior:"instant"})})()`);
       await until(()=>evaluate(`sequenceDraws.at(-1) === ${Math.round(fraction*160)} && Math.abs(sunglassesSequence.getBoundingClientRect().top)<2`));
       if (previous.index != null) {
         const direction = Math.sign(Math.round(fraction*160) - previous.index);
@@ -230,7 +97,7 @@ try {
     console.log("Forward, reverse, endpoints and idle frame verified at",width);
   }
   await cmd("Emulation.setEmulatedMedia",{features:[{name:"prefers-reduced-motion",value:"reduce"}]});
-  await until(()=>evaluate('getComputedStyle(sunglassesSequence).backgroundImage.includes("last.jpg") && getComputedStyle(sunglassesSequence).position==="static" && getComputedStyle(document.querySelector("main"),"::after").display==="none" && sunglassesSequence.getContext("2d").getImageData(20,20,1,1).data[3]===0'));
+  await until(()=>evaluate('getComputedStyle(sunglassesSequence).backgroundImage.includes("last.jpg") && getComputedStyle(sunglassesSequence).position==="static" && getComputedStyle(home,"::after").display==="none" && sunglassesSequence.getContext("2d").getImageData(20,20,1,1).data[3]===0'));
   await cmd("Emulation.setEmulatedMedia",{features:[]});
   await cmd("Emulation.setDeviceMetricsOverride",{width:1280,height:800,deviceScaleFactor:1,mobile:false});
   const active = () => evaluate('document.body.dataset.view');
@@ -299,9 +166,9 @@ try {
   assert.ok(await evaluate('commandDialog.open && !document.body.classList.contains("drawer-open")'));
   await keypress("ArrowDown"); await keypress("Enter");
   await until(async()=>await active()==="about");
-  await keypress("k",2); await cmd("Input.insertText",{text:"swpr"});
+  await keypress("k",2); await cmd("Input.insertText",{text:"home"});
   await keypress("Enter");
-  await until(async()=>await active()==="home" && await settled());
+  await until(async()=>await active()==="home");
   await clickVisible("#menuTrigger");
   const backdropPoint = {x:385,y:450};
   await cmd("Input.dispatchMouseEvent",{type:"mousePressed",...backdropPoint,button:"left",clickCount:1});
@@ -322,48 +189,24 @@ try {
   await evaluate('localStorage.setItem("orbitfolio.theme","light")');
   await cmd("Page.navigate",{url:origin+"/?editor#admin="+owner});
   await until(()=>evaluate('document.querySelector("#studioDialog")?.open'));
-  for (const width of [320,390,768,1024,1536]) {
-    await cmd("Emulation.setDeviceMetricsOverride",{width,height:864,deviceScaleFactor:1,mobile:false});
-    const layout = await evaluate(`(() => {
-      const title = document.getElementById("heroName");
-      const lines = [...title.children].map(line => {
-        const range = document.createRange(); range.selectNodeContents(line);
-        return range.getClientRects().length === 1 ? line.textContent : "wrapped";
-      });
-      const portrait = document.getElementById("profilePortrait").getBoundingClientRect();
-      const button = document.getElementById("portraitToggle").getBoundingClientRect();
-      const separate = innerWidth <= 820 ? +getComputedStyle(document.getElementById("portraitToggle")).zIndex > +getComputedStyle(document.getElementById("home"),"::after").zIndex :
-        button.right <= portrait.left || button.left >= portrait.right;
-      const chrome = document.getElementById("auraPortrait").getBoundingClientRect();
-      const deltaX = Math.abs(portrait.left + portrait.width * .49875 - chrome.left - chrome.width * .5125);
-      const deltaY = Math.abs(portrait.top + portrait.height * .1925 - chrome.top - chrome.height * .25625);
-      return {lines, separate, aligned:deltaX < .1 && deltaY < .1, mobileStack:title.getBoundingClientRect().bottom <= portrait.top,
-        pageHeight:document.getElementById("home").offsetHeight, size:parseFloat(getComputedStyle(title).fontSize),width:portrait.width,height:portrait.height};
-    })()`);
-    assert.deepEqual(layout.lines,["Christian Rey","Adolfo"],"Two-line name at "+width);
-    assert.ok(layout.size >= 50 && layout.separate && layout.pageHeight >= 863,"Full-height hero and separate control at "+width);
-    assert.ok(layout.aligned && Math.abs(layout.width-layout.height) < .1 && (width <= 820 ? layout.mobileStack : layout.height > 600),"Eye registration and portrait position at "+width+" "+JSON.stringify(layout));
-  }
   await evaluate('document.querySelector("[data-editor-tab=journey]").click()');
   assert.equal(await evaluate('document.querySelectorAll("#collection-certificates details").length'),3);
   await evaluate('const issuer=document.querySelectorAll("#collection-certificates .repeat-fields input")[1]; issuer.value="Certificate QA"; issuer.dispatchEvent(new Event("input")); document.querySelector("[data-editor-tab=profile]").click()');
   await evaluate('const nameField=document.querySelector("#editor-profile input"); nameField.value="Portfolio QA"; nameField.dispatchEvent(new Event("input"));');
-  for (const [index,id] of ["profilePortrait","auraPortrait"].entries()) {
-    await evaluate(`(async()=>{
-      const imgInput=document.querySelectorAll("#editor-profile input[type=file]")[${index}];
-      const c=document.createElement("canvas"); c.width=c.height=4;
-      const blob=await new Promise(r=>c.toBlob(r)), files=new DataTransfer();
-      files.items.add(new File([blob],"sample.png",{type:"image/png"}));
-      imgInput.files=files.files; imgInput.dispatchEvent(new Event("change"));
-    })()`);
-    await until(()=>evaluate(`document.getElementById("${id}").src.startsWith("data:image/jpeg")`));
-  }
+  await evaluate('document.querySelector("[data-editor-tab=projects]").click()');
+  await evaluate(`(async()=>{
+    const imgInput=document.querySelector("#editor-projects input[type=file]");
+    const c=document.createElement("canvas"); c.width=c.height=4;
+    const blob=await new Promise(r=>c.toBlob(r)), files=new DataTransfer();
+    files.items.add(new File([blob],"sample.png",{type:"image/png"}));
+    imgInput.files=files.files; imgInput.dispatchEvent(new Event("change"));
+  })()`);
+  await until(()=>evaluate('document.querySelector(".project-card__media img").src.startsWith("data:image/jpeg")'));
   await evaluate('document.getElementById("saveContent").click()');
   await until(()=>evaluate('!document.getElementById("studioDialog").open'));
   await cmd("Page.reload");
   await until(()=>evaluate('document.body.classList.contains("ready") && document.title.startsWith("Portfolio QA")'));
-  assert.ok(await evaluate('document.getElementById("profilePortrait").src.startsWith("data:image/jpeg")'));
-  assert.ok(await evaluate('document.getElementById("auraPortrait").src.startsWith("data:image/jpeg")'));
+  assert.ok(await evaluate('document.querySelector(".project-card__media img").src.startsWith("data:image/jpeg")'));
   assert.equal(await evaluate('document.querySelector(".certificate-issuer").textContent'),"Certificate QA");
   assert.equal((await (await fetch(origin+"/api/portfolio")).json()).content.profile.name,"Portfolio QA");
   assert.equal(JSON.parse(await readFile(path.join(temp,"portfolio.json"),"utf8")).profile.name,"Portfolio QA");
@@ -383,17 +226,7 @@ try {
   await until(()=>evaluate('document.querySelector(".gallery-controls").hidden && !document.documentElement.classList.contains("theme-wipe")'));
   await cmd("Emulation.setEmulatedMedia",{features:[{name:"prefers-reduced-motion",value:"reduce"}]});
   await cmd("Page.navigate",{url:origin+"/#home"});
-  await until(()=>evaluate('document.body.classList.contains("ready") && !document.getElementById("portraitToggle").hidden'));
-  await clickPortrait();
-  const midFade = () => evaluate('(()=>{const a=getComputedStyle(document.querySelector("[data-portrait=aura]")); return +a.opacity>0 && +a.opacity<1 && a.transform==="none" && a.filter==="none" && a.transitionDuration==="0.3s"})()');
-  await until(midFade);
-  await until(settled);
-  await move(180,500); await delay(90); assert.equal(await lensHidden(),true);
-  await delay(1300);
-  assert.equal(await label(),"Show Normal","An early click must cancel the automatic transition");
-  await clickPortrait();
-  await until(midFade);
-  await until(async()=>await label() === "Show Aura");
+  await until(()=>evaluate('document.body.classList.contains("ready") && !home.hidden'));
   for (const width of [320,390,768,1024,1440]) {
     await cmd("Emulation.setDeviceMetricsOverride",{width,height:900,deviceScaleFactor:1,mobile:false});
     if (!await evaluate('document.documentElement.scrollWidth <= innerWidth + 1')) {
@@ -402,22 +235,6 @@ try {
     }
   }
   await cmd("Emulation.setEmulatedMedia",{features:[]});
-  for (const mode of ["touch","no-webgl"]) {
-    await cmd("Emulation.setTouchEmulationEnabled",mode === "touch" ? {enabled:true,maxTouchPoints:1} : {enabled:false});
-    await cmd("Page.navigate",{url:origin+"/?"+mode});
-    await until(()=>evaluate('document.body.classList.contains("ready") && !document.getElementById("portraitToggle").hidden'));
-    await clickPortrait();
-    await until(midFade);
-    assert.ok(await evaluate('document.querySelector(".portrait-canvas").hidden && !shardDraws.length'));
-    await until(settled);
-    if (mode==="touch") {
-      await move(point.x,point.y); await delay(90); assert.equal(await lensHidden(),true);
-      assert.ok(await evaluate('!performance.getEntriesByType("resource").some(r=>r.name.includes("three.module"))'));
-    }
-  }
-  await evaluate('portraitSwitch.destroy()');
-  await pressD();
-  assert.ok(await evaluate('document.getElementById("portraitToggle").hidden && !document.getElementById("portraitFrame").classList.contains("is-debug")'));
   assert.deepEqual(errors,[]);
   console.log("Browser editing, image upload, shared save, reload, project filter, case study, theme, quick jump and five viewport widths passed.");
 } finally {
