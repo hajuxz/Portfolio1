@@ -75,7 +75,7 @@ function shardGeometry(image, config, seed) {
 const rgb = hex => new THREE.Vector3(...hex.slice(1).match(/../g).map(v=>parseInt(v,16)/255));
 const fraction = (value,size) => typeof value === "string" && value.endsWith("%") ? parseFloat(value)/100 : parseFloat(value)/size;
 
-export function createBurst(canvas, frame, images, config, gsap) {
+export function createBurst(canvas, frame, images, config, gsap, textureSources = {}) {
   const attributes={alpha:true,antialias:false,depth:false,stencil:false,powerPreference:"low-power"};
   const context=canvas.getContext("webgl2",attributes) || canvas.getContext("webgl",attributes);
   if (!context) throw Error("WebGL unavailable");
@@ -103,7 +103,7 @@ export function createBurst(canvas, frame, images, config, gsap) {
       throw Error([gl.getProgramInfoLog(program),gl.getShaderInfoLog(vertex),gl.getShaderInfoLog(fragment)].filter(Boolean).join("\n"));
     };
     for (const [key,image] of Object.entries(images)) {
-      const texture = remember(new THREE.Texture(image));
+      const texture = remember(new THREE.Texture(textureSources[key] || image));
       texture.generateMipmaps = false;
       texture.minFilter = texture.magFilter = THREE.LinearFilter;
       texture.needsUpdate = true;
@@ -114,7 +114,7 @@ export function createBurst(canvas, frame, images, config, gsap) {
     const uniforms = {
       uFrom:u(textures.normal), uTo:u(textures.aura), uNoise:u(remember(fractureTexture(config))),
       uFromBox:u(boxes.normal), uToBox:u(boxes.aura), uEye:u(new THREE.Vector2()), uSize:u(new THREE.Vector2()),
-      uAccent:u(rgb(config.ACCENT_COLOR)), uGraphite:u(rgb(config.graphiteColor)), uProgress:u(0), uTime:u(0),
+      uAccent:u(rgb(config.ACCENT_COLOR)), uGraphite:u(rgb(config.graphiteColor)), uBackground:u(new THREE.Vector3(1,1,1)), uProgress:u(0), uTime:u(0),
       uEdge:u(config.edgeWidth), uGlow:u(config.glow), uBlur:u(config.blurPx), uZoom:u(config.incomingScale), uGravity:u(config.fragments.gravity)
     };
     const material = (vert,frag,transparent) => remember(new THREE.RawShaderMaterial({
@@ -129,6 +129,8 @@ export function createBurst(canvas, frame, images, config, gsap) {
     scene.remove(shards);
 
     function resize() {
+      const bg = new THREE.Color().setStyle(getComputedStyle(frame.closest(".intro-hero")).backgroundColor, THREE.LinearSRGBColorSpace);
+      uniforms.uBackground.value.set(bg.r,bg.g,bg.b);
       const w=frame.clientWidth, h=frame.clientHeight;
       if (!w || !h) return;
       const rect=frame.getBoundingClientRect();

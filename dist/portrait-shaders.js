@@ -16,14 +16,14 @@ export const portraitFragment = `
   uniform sampler2D uFrom, uTo, uNoise;
   uniform vec4 uFromBox, uToBox;
   uniform vec2 uSize, uEye;
-  uniform vec3 uAccent;
+  uniform vec3 uAccent, uBackground;
   uniform float uProgress, uEdge, uBlur, uZoom, uGlow;
 
   vec3 portrait(sampler2D image, vec2 stage, vec4 box) {
     vec2 uv = (stage - box.xy) / box.zw;
-    if (any(lessThan(uv, vec2(0.0))) || any(greaterThan(uv, vec2(1.0)))) return vec3(1.0);
+    if (any(lessThan(uv, vec2(0.0))) || any(greaterThan(uv, vec2(1.0)))) return uBackground;
     vec4 texel = texture2D(image, vec2(uv.x, 1.0 - uv.y));
-    return mix(vec3(1.0), texel.rgb, texel.a);
+    return mix(uBackground, texel.rgb, texel.a);
   }
 
   void main() {
@@ -44,7 +44,8 @@ export const portraitFragment = `
     if (uProgress >= 1.0) { gl_FragColor = vec4(fresh, 1.0); return; }
     float reveal = smoothstep(field - uEdge * .2, field + uEdge * .2, uProgress);
     float distanceToEdge = abs(field - uProgress) / uEdge;
-    float subject = 1.0 - min(min(old.r, min(old.g, old.b)), min(fresh.r, min(fresh.g, fresh.b)));
+    vec3 contrast = max(abs(old - uBackground), abs(fresh - uBackground));
+    float subject = max(contrast.r, max(contrast.g, contrast.b));
     float ink = smoothstep(.025, .2, subject);
     vec3 base = mix(old, fresh, reveal);
     float rim = (1.0 - smoothstep(0.0, 1.0, distanceToEdge)) * ink;

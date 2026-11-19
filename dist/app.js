@@ -60,7 +60,7 @@ function render(content) {
   const p = content.profile;
   const words = p.name.trim().split(/\s+/);
   const initials = [words[0]?.[0], words.length > 1 ? words.at(-1)[0] : ""].join("").toUpperCase();
-  for (const id of ["railInitials","mobileInitials","signatureInitials"]) byId(id).textContent = initials;
+  for (const id of ["mobileInitials","signatureInitials"]) byId(id).textContent = initials;
   byId("footerMark").replaceChildren(initials, node("span","",".")); 
   const surname = words.at(-1);
   const nameLines = [words.slice(0,-1).join(" "), surname].filter(Boolean);
@@ -205,18 +205,11 @@ function openProject(p) {
   fill("projectDialogContent",[hero,body]);
   byId("projectDialog").showModal();
 }
-function toggleTheme() {
-  const theme = document.documentElement.dataset.theme === "dark" ? "light" : "dark";
-  document.documentElement.dataset.theme = theme;
-  syncThemeButtons();
-  updateGalleryControls();
-  try { localStorage.setItem("orbitfolio.theme",theme); } catch {}
-}
+document.addEventListener("portfolio:theme",updateGalleryControls);
 const commands = [
-  ...[["home","Home"],["about","About & services"],["work","Selected work"],["skills","Skills"],["journey","Journey"],["contact","Contact"]]
-    .map(([id,label])=>({label,icon:"↗",action:()=>{ location.hash = id; byId(id).scrollIntoView(); }})),
+  ...NAV_CONFIG.sections.map(({id,label})=>({label,icon:"↗",action:()=>{ location.hash = id; byId(id).scrollIntoView(); }})),
   {label:"Certificates of completion",icon:"↗",action:()=>{location.hash = "certificates"; byId("certificates").scrollIntoView();}},
-  {label:"Switch light / dark theme",icon:"◐",action:toggleTheme}
+  {label:"Switch light / dark theme",icon:"◐",action:portfolioNav.toggleTheme}
 ];
 function renderCommands() {
   const query = byId("commandInput").value.toLowerCase().trim();
@@ -244,14 +237,7 @@ byId("commandDialog").onkeydown = event => {
   } else if (event.key === "Enter" && document.activeElement === byId("commandInput")) items[0].click();
 };
 document.addEventListener("keydown",e=>{ if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {e.preventDefault(); quickJump();} });
-byId("commandButton").onclick = byId("mobileCommandButton").onclick = quickJump;
-function syncThemeButtons() {
-  const dark = document.documentElement.dataset.theme === "dark", next = dark ? "light" : "dark";
-  for (const id of ["themeToggle","mobileThemeToggle"]) byId(id).setAttribute("aria-label","Switch to "+next+" theme");
-  byId("mobileThemeToggle").textContent = dark ? "Light ◑" : "Dark ◐";
-}
-byId("themeToggle").onclick = byId("mobileThemeToggle").onclick = toggleTheme;
-syncThemeButtons();
+byId("commandButton").onclick = quickJump;
 document.querySelector("[data-close-project]").onclick = ()=>byId("projectDialog").close();
 for (const id of ["projectDialog","commandDialog"]) byId(id).onclick = e=>{ if (e.target === byId(id)) byId(id).close(); };
 byId("copyEmail").onclick = async ()=>{
@@ -264,19 +250,13 @@ byId("contactForm").onsubmit = e=>{
   const form = new FormData(e.target), body = form.get("message")+"\n\n"+form.get("name")+"\n"+form.get("email");
   location.href = "mailto:"+encodeURIComponent(current.contact.email)+"?subject="+encodeURIComponent(form.get("subject"))+"&body="+encodeURIComponent(body);
 };
-function updateNavigation() {
+function updateScrollProgress() {
   document.body.classList.toggle("at-hero", byId("home").getBoundingClientRect().bottom > 70);
-  const marker = innerHeight * 0.4;
-  const section = all("[data-section]").filter(s=>s.getBoundingClientRect().top <= marker).at(-1)?.id || "home";
-  all("[data-nav]").forEach(a=>{
-    a.classList.toggle("is-active",a.dataset.nav === section);
-    if (a.dataset.nav === section) a.setAttribute("aria-current","location"); else a.removeAttribute("aria-current");
-  });
   const timeline = document.querySelector(".timeline-shell").getBoundingClientRect();
   document.documentElement.style.setProperty("--timeline-progress", Math.min(100,Math.max(0,(innerHeight*.7-timeline.top)/timeline.height*100))+"%");
 }
 let frame = false;
-addEventListener("scroll",()=>{ if (!frame) { frame = true; requestAnimationFrame(()=>{ updateNavigation(); frame = false; }); } },{passive:true});
+addEventListener("scroll",()=>{ if (!frame) { frame = true; requestAnimationFrame(()=>{ updateScrollProgress(); frame = false; }); } },{passive:true});
 const revealObserver = new IntersectionObserver(entries=>entries.forEach(e=>{
   if (e.isIntersecting) {e.target.classList.add("is-visible"); revealObserver.unobserve(e.target);}
 }),{threshold:0.03});
@@ -285,7 +265,7 @@ function updateClock() {
   byId("localTime").textContent = new Intl.DateTimeFormat("en-PH",{hour:"numeric",minute:"2-digit", timeZone:"Asia/Manila"}).format(new Date())+" PHT";
 }
 updateClock(); setInterval(updateClock,30000);
-updateNavigation();
+updateScrollProgress();
 
 if (window.gsap && window.ScrollTrigger) {
   gsap.registerPlugin(ScrollTrigger);

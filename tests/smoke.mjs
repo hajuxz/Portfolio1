@@ -140,7 +140,7 @@ try {
   assert.ok(await evaluate('getComputedStyle(document.querySelector("[data-portrait=aura]")).opacity==="0"'));
   await evaluate('scrollTo({top:document.getElementById("home").offsetHeight / 2,behavior:"instant"})');
   await until(()=>evaluate('Number(getComputedStyle(document.querySelector(".intro-shade")).opacity) > .4 && Number(getComputedStyle(document.querySelector(".intro-shade")).opacity) < .6'));
-  await evaluate(`document.querySelector('.intro-nav a[href="#about"]').click()`);
+  await evaluate(`document.querySelector('[data-section-link="about"]').click()`);
   await until(()=>evaluate('document.getElementById("about").getBoundingClientRect().top < 120'));
   await evaluate('document.getElementById("portraitFrame").remove()');
   await until(()=>evaluate('document.getElementById("portraitToggle").hidden && Object.values(releasedGPU).every(count=>count>0)'));
@@ -202,6 +202,61 @@ try {
   await delay(150);
   assert.equal(await evaluate('document.querySelector(".aura-lens").getAttribute("style")'),idleStyle);
   console.log("Lens proximity, registration in both directions, outer pixels, debug, exit and idle state passed.");
+  const currentSection = () => evaluate('document.querySelector("#primaryNav [aria-current=page]")?.dataset.sectionLink');
+  const navBounds = await evaluate(`(()=>{
+    const nav=document.querySelector('nav[aria-label="Primary"]'), b=nav.getBoundingClientRect();
+    return {top:b.top,height:b.height,offset:b.left+b.width/2-document.documentElement.clientWidth/2,ids:[...nav.querySelectorAll("[data-section-link]")].map(a=>a.dataset.sectionLink)};
+  })()`);
+  assert.deepEqual(navBounds.ids,["home","about","work","skills","journey","contact"]);
+  assert.ok(navBounds.top===16 && Math.abs(navBounds.offset)<1 && navBounds.height===48,JSON.stringify(navBounds));
+  const workLink = await evaluate('(()=>{const r=document.querySelector("[data-section-link=work]").getBoundingClientRect();return [r.x+r.width/2,r.y+r.height/2]})()');
+  await move(...workLink);
+  const tracks = id => evaluate(`(()=>{const p=document.querySelector(".nav-indicator").getBoundingClientRect(),a=document.querySelector('[data-section-link="${id}"]').getBoundingClientRect();return Math.abs(p.left-a.left)<.5 && Math.abs(p.width-a.width)<.5})()`);
+  await until(()=>tracks("work")); await move(5,100); await until(()=>tracks("home"));
+  await evaluate('scrollBy({top:340,behavior:"instant"})');
+  await until(()=>evaluate('primaryNav.classList.contains("nav-away") && primaryNav.classList.contains("nav-compact")'));
+  await evaluate('scrollBy({top:-30,behavior:"instant"})');
+  await until(()=>evaluate('!primaryNav.classList.contains("nav-away")'));
+  await evaluate('document.querySelector("[data-section-link=skills]").click()');
+  await until(async()=>await currentSection()==="skills" && await evaluate('Math.abs(document.getElementById("skills").getBoundingClientRect().top-80)<2'));
+  await evaluate('document.dispatchEvent(new WheelEvent("wheel",{bubbles:true})); document.getElementById("journey").scrollIntoView({behavior:"instant"})');
+  await until(async()=>await currentSection()==="journey");
+  await cmd("Emulation.setDeviceMetricsOverride",{width:390,height:844,deviceScaleFactor:1,mobile:false});
+  const openMenu = () => evaluate('document.querySelector(".nav-menu-toggle").click()');
+  const closed = () => evaluate('document.getElementById("navMenu").inert && !document.documentElement.classList.contains("nav-locked")');
+  await openMenu();
+  assert.ok(await evaluate('document.documentElement.classList.contains("nav-locked") && document.querySelector(".nav-menu-toggle").getAttribute("aria-expanded")==="true"'));
+  await cmd("Input.dispatchKeyEvent",{type:"keyDown",key:"Escape",code:"Escape",windowsVirtualKeyCode:27});
+  assert.ok(await closed());
+  assert.ok(await evaluate('document.activeElement.matches(".nav-menu-toggle")'));
+  await openMenu(); await evaluate('document.body.dispatchEvent(new PointerEvent("pointerdown",{bubbles:true}))'); assert.ok(await closed());
+  await openMenu();
+  await until(()=>evaluate('getComputedStyle(document.querySelector(".nav-cta")).opacity==="1"'));
+  assert.ok(await evaluate('[...primaryNav.querySelectorAll("a,button")].every(el=>el.getBoundingClientRect().height>=44 && el.getBoundingClientRect().width>=44)'));
+  await evaluate('document.querySelector("[data-section-link=contact]").click()');
+  assert.ok(await closed());
+  try { await until(async()=>await currentSection()==="contact",4000); }
+  catch { assert.fail(await evaluate(`JSON.stringify({hash:location.hash,y:scrollY,closest:document.querySelector('[aria-current=page]')?.dataset.sectionLink,
+    rootHeight:document.documentElement.scrollHeight,target:document.getElementById("contact").getBoundingClientRect().top,
+    focus:document.activeElement.id,menu:document.getElementById("navMenu").inert})`)); }
+  await cmd("Emulation.setEmulatedMedia",{features:[{name:"prefers-color-scheme",value:"dark"}]});
+  await cmd("Page.navigate",{url:origin+"/?nav-theme"});
+  await until(()=>evaluate('document.body.classList.contains("ready") && themeToggle.getAttribute("aria-pressed")==="true"'));
+  assert.ok(await evaluate('getComputedStyle(document.getElementById("home")).backgroundColor==="rgb(16, 18, 23)" && getComputedStyle(profilePortrait).maskImage.includes("normal-mask")'));
+  await evaluate('themeToggle.click()');
+  await until(()=>evaluate('document.getAnimations().some(a=>a.effect?.getKeyframes().some(k=>k.clipPath?.startsWith("circle(")))'));
+  await until(()=>evaluate('document.documentElement.dataset.theme==="light" && localStorage.getItem("orbitfolio.theme")==="light" && !document.documentElement.classList.contains("theme-wipe")'));
+  await cmd("Page.reload");
+  await until(()=>evaluate('document.body.classList.contains("ready") && themeToggle.getAttribute("aria-pressed")==="false"'));
+  assert.ok(await evaluate(`(()=>{
+    Object.defineProperty(document,"startViewTransition",{configurable:true,value:undefined});
+    themeToggle.click();
+    const instant=document.documentElement.dataset.theme==="dark" && !document.documentElement.classList.contains("theme-wipe");
+    themeToggle.click(); delete document.startViewTransition;
+    return instant && document.documentElement.dataset.theme==="light";
+  })()`));
+  await cmd("Emulation.setEmulatedMedia",{features:[]});
+  console.log("Nav dimensions, indicator, anchors, scroll spy, hide/show, mobile dismissal, system and saved theme passed.");
   await cmd("Page.navigate",{url:origin+"/?editor#admin="+owner});
   await until(()=>evaluate('document.querySelector("#studioDialog")?.open'));
   for (const width of [320,390,768,1024,1536]) {
@@ -251,17 +306,17 @@ try {
   assert.equal(JSON.parse(await readFile(path.join(temp,"portfolio.json"),"utf8")).profile.name,"Portfolio QA");
   await evaluate('document.querySelectorAll(".filter-button")[1].click(); document.querySelector(".project-open").click()');
   assert.equal(await evaluate('document.getElementById("projectDialog").open && document.querySelectorAll(".project-card").length === 1'),true);
-  await evaluate('document.getElementById("projectDialog").close(); document.getElementById("themeToggle").click(); document.getElementById("commandButton").click()');
+  await evaluate('document.getElementById("projectDialog").close(); document.getElementById("commandButton").click()');
   assert.ok(await evaluate('document.getElementById("commandDialog").open'));
   await evaluate('document.getElementById("commandDialog").close()');
   await cmd("Emulation.setDeviceMetricsOverride",{width:390,height:850,deviceScaleFactor:1,mobile:false});
-  await evaluate(`if (document.documentElement.dataset.theme === "light") document.getElementById("mobileThemeToggle").click();
+  await evaluate(`if (document.documentElement.dataset.theme === "light") document.getElementById("themeToggle").click();
     document.querySelector(".filter-button").click();`);
-  assert.ok(await evaluate('!document.querySelector(".gallery-controls").hidden && !document.getElementById("nextProject").disabled'));
+  await until(()=>evaluate('!document.documentElement.classList.contains("theme-wipe") && !document.querySelector(".gallery-controls").hidden && !document.getElementById("nextProject").disabled'));
   await evaluate('document.getElementById("nextProject").click()');
   await until(()=>evaluate('document.getElementById("projectsList").scrollLeft > 50'));
-  await evaluate('document.getElementById("mobileThemeToggle").click()');
-  assert.ok(await evaluate('document.querySelector(".gallery-controls").hidden'));
+  await evaluate('document.getElementById("themeToggle").click()');
+  await until(()=>evaluate('document.querySelector(".gallery-controls").hidden && !document.documentElement.classList.contains("theme-wipe")'));
   await cmd("Emulation.setEmulatedMedia",{features:[{name:"prefers-reduced-motion",value:"reduce"}]});
   await cmd("Page.reload");
   await until(()=>evaluate('document.body.classList.contains("ready") && !document.getElementById("portraitToggle").hidden'));

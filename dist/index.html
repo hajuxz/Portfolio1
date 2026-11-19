@@ -9,13 +9,14 @@
     />
     <meta name="theme-color" content="#f4f1e9" />
     <title>Orbitfolio — Editable Portfolio</title>
+    <script src="navigation-config.js"></script>
     <script>
       (() => {
-        try {
-          const saved = localStorage.getItem("orbitfolio.theme");
-          const dark = matchMedia("(prefers-color-scheme: dark)").matches;
-          document.documentElement.dataset.theme = saved || (dark ? "dark" : "light");
-        } catch (_) {}
+        let saved;
+        try { saved = localStorage.getItem(NAV_CONFIG.storageKey); } catch {}
+        const theme = saved === "dark" || saved === "light" ? saved : matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+        document.documentElement.dataset.theme = theme;
+        document.querySelector('meta[name="theme-color"]').content = NAV_CONFIG.colors[theme].bg;
       })();
     </script>
     <link rel="preload" as="image" href="assets/portrait-normal.jpg" fetchpriority="high" />
@@ -23,6 +24,7 @@
     <link rel="preload" as="font" type="font/woff2" href="assets/anton/anton-latin-400-normal.woff2" crossorigin />
     <link rel="stylesheet" href="styles.css" />
     <link rel="stylesheet" href="portrait.css" />
+    <link rel="stylesheet" href="navigation.css" />
   </head>
   <body class="at-hero">
     <a class="skip-link" href="#main-content">Skip to content</a>
@@ -31,66 +33,22 @@
     <div class="cursor-aura" aria-hidden="true"></div>
     <div class="noise" aria-hidden="true"></div>
 
-    <aside class="signal-rail" aria-label="Primary navigation">
-      <a class="rail-brand" href="#home" aria-label="Go to home">
-        <span id="railInitials">YN</span><i></i>
-      </a>
-
-      <nav class="rail-nav" aria-label="Portfolio sections">
-        <a class="rail-link is-active" href="#home" data-nav="home" aria-label="Home">
-          <span>01</span><b>Home</b>
-        </a>
-        <a class="rail-link" href="#about" data-nav="about" aria-label="About and services">
-          <span>02</span><b>About</b>
-        </a>
-        <a class="rail-link" href="#work" data-nav="work" aria-label="Selected work">
-          <span>03</span><b>Work</b>
-        </a>
-        <a class="rail-link" href="#skills" data-nav="skills" aria-label="Capabilities">
-          <span>04</span><b>Skills</b>
-        </a>
-        <a class="rail-link" href="#journey" data-nav="journey" aria-label="Experience">
-          <span>05</span><b>Journey</b>
-        </a>
-        <a class="rail-link" href="#contact" data-nav="contact" aria-label="Contact">
-          <span>06</span><b>Contact</b>
-        </a>
-      </nav>
-
-      <div class="rail-actions">
-        <button class="icon-button" id="commandButton" type="button" aria-label="Open quick jump">
-          <span aria-hidden="true">⌘</span>
+    <nav class="primary-nav" id="primaryNav" aria-label="Primary">
+      <div class="primary-row">
+        <a class="nav-brand" href="#home" aria-label="Home"><span id="mobileInitials">CA</span></a>
+        <div class="nav-links"><span class="nav-indicator" aria-hidden="true"></span></div>
+        <span class="nav-divider" aria-hidden="true"></span>
+        <button class="nav-icon nav-theme" id="themeToggle" type="button" aria-label="Toggle dark mode" aria-pressed="false">
+          <svg class="nav-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.5 14.2A8.4 8.4 0 0 1 9.8 3.5 8.5 8.5 0 1 0 20.5 14.2Z"/></svg>
+          <svg class="nav-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.5 1.5m11 11L19 19M19 5l-1.5 1.5m-11 11L5 19"/></svg>
         </button>
-        <button class="icon-button" id="themeToggle" type="button" aria-label="Switch to dark theme">
-          <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M20.5 14.2A8.4 8.4 0 0 1 9.8 3.5 8.5 8.5 0 1 0 20.5 14.2Z"/></svg>
-        </button>
-        <button class="icon-button edit-trigger" type="button" data-open-editor aria-label="Edit portfolio">
-          <svg aria-hidden="true" viewBox="0 0 24 24"><path d="m4 16-.8 4.8L8 20l11-11-4-4L4 16Zm9.8-9.8 4 4M13 20h8"/></svg>
-        </button>
+        <button class="nav-icon nav-menu-toggle" type="button" aria-label="Open navigation" aria-expanded="false" aria-controls="navMenu"><span></span><span></span></button>
       </div>
-    </aside>
-
-    <header class="mobile-header">
-      <a class="mobile-brand" href="#home" aria-label="Home"><span id="mobileInitials">YN</span><i></i></a>
-      <div class="mobile-header__actions">
-        <button class="text-button" id="mobileThemeToggle" type="button" aria-label="Switch color theme">Theme ◐</button>
-        <button class="text-button" id="mobileCommandButton" type="button">Quick jump</button>
-        <button class="icon-button" type="button" data-open-editor aria-label="Edit portfolio">
-          <svg aria-hidden="true" viewBox="0 0 24 24"><path d="m4 16-.8 4.8L8 20l11-11-4-4L4 16Zm9.8-9.8 4 4M13 20h8"/></svg>
-        </button>
-      </div>
-    </header>
+      <div class="nav-menu" id="navMenu" inert><div class="nav-menu-inner"></div></div>
+    </nav>
 
     <main id="main-content">
       <section class="intro-hero" id="home" data-section="home" aria-labelledby="heroName">
-        <nav class="intro-nav" aria-label="Hero navigation">
-          <a href="#home" data-nav="home" aria-current="location">Home</a>
-          <a href="#about" data-nav="about">About</a>
-          <a href="#skills" data-nav="skills">Skills</a>
-          <a href="#work" data-nav="work">Projects</a>
-          <a href="#contact" data-nav="contact">Contact <span aria-hidden="true">↗</span></a>
-        </nav>
-
         <div class="intro-copy">
           <h1 class="intro-name" id="heroName"><span>Christian Rey</span> <span>Adolfo</span></h1>
           <ul class="intro-details">
@@ -274,17 +232,9 @@
           <p id="footerNote">Built with intention. Ready to make it yours.</p>
         </div>
         <p>© <span id="footerYear"></span> <span id="footerName">Your Name</span></p>
-        <a href="#home">Back to top ↑</a>
+        <div class="footer-tools"><button type="button" class="text-button" id="commandButton">Quick jump</button><button type="button" class="text-button" data-open-editor>Edit portfolio</button><a href="#home">Back to top ↑</a></div>
       </footer>
     </main>
-
-    <nav class="mobile-nav" aria-label="Mobile navigation">
-      <a class="is-active" href="#home" data-nav="home"><span>⌂</span><b>Home</b></a>
-      <a href="#work" data-nav="work"><span>◫</span><b>Work</b></a>
-      <button type="button" data-open-editor><span>✎</span><b>Edit</b></button>
-      <a href="#skills" data-nav="skills"><span>✦</span><b>Skills</b></a>
-      <a href="#contact" data-nav="contact"><span>↗</span><b>Contact</b></a>
-    </nav>
 
     <dialog class="project-dialog" id="projectDialog" aria-labelledby="projectDialogTitle">
       <div class="dialog-shell">
@@ -377,6 +327,7 @@
     <script src="vendor/gsap.min.js"></script>
     <script src="vendor/ScrollTrigger.min.js"></script>
     <script src="portrait.js"></script>
+    <script src="navigation.js"></script>
     <script src="app.js"></script>
     <script src="studio.js"></script>
   </body>

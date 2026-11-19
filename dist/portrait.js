@@ -2,8 +2,8 @@
 
 const CONFIG = {
   portraits: {
-    normal: {src:"assets/portrait-normal.jpg", x:0, y:0, scale:1},
-    aura: {src:"assets/portrait-aura.jpg", x:"-1.375%", y:"-6.375%", scale:1}
+    normal: {src:"assets/portrait-normal.jpg", mask:"assets/portrait-normal-mask.png", x:0, y:0, scale:1},
+    aura: {src:"assets/portrait-aura.jpg", mask:"assets/portrait-aura-mask.png", x:"-1.375%", y:"-6.375%", scale:1}
   },
   eyes: {x:49.875, y:19.25},
   ACCENT_COLOR: "#dbe0e6", graphiteColor: "#303338",
@@ -83,14 +83,27 @@ const portraitSwitch = (() => {
     preparing=import("./portrait-burst.js").then(async ({createBurst})=>{
       if (destroyed || version!==gpuVersion || !eligible()) return null;
       // DOM image.width follows CSS. Detached images keep native dimensions for GPU storage.
+      const textureSources = {};
       const entries=await Promise.all(Object.entries(images).map(async ([key,source])=>{
         const image=new Image();
         image.src=source.currentSrc || source.src;
         await image.decode();
+        if (source.getAttribute("src") === PORTRAITS[key].src && PORTRAITS[key].mask) {
+          const mask = new Image();
+          mask.src = PORTRAITS[key].mask;
+          await mask.decode();
+          const cutout = document.createElement("canvas");
+          cutout.width = image.naturalWidth; cutout.height = image.naturalHeight;
+          const ctx = cutout.getContext("2d");
+          ctx.drawImage(image,0,0);
+          ctx.globalCompositeOperation = "destination-in";
+          ctx.drawImage(mask,0,0,cutout.width,cutout.height);
+          textureSources[key] = cutout;
+        }
         return [key,image];
       }));
       if (destroyed || version!==gpuVersion || !eligible()) return null;
-      engine=createBurst(canvas,frame,Object.fromEntries(entries),CONFIG,window.gsap);
+      engine=createBurst(canvas,frame,Object.fromEntries(entries),CONFIG,window.gsap,textureSources);
       engine.setVisible(visible());
       return engine;
     }).catch(()=>{if (version===gpuVersion) gpuFailed=true;return null;})
@@ -140,6 +153,7 @@ const portraitSwitch = (() => {
   const resize=new ResizeObserver(()=>{lens.layout();if (visible()) engine?.resize();});
   resize.observe(frame);
   document.addEventListener("visibilitychange",onVisibility,options);
+  document.addEventListener("portfolio:theme",()=>engine?.resize(),options);
   toggle.addEventListener("click",()=>{autoUsed=true;swap();},options);
   document.addEventListener("keydown",event=>{
     if (event.key.toLowerCase()!=="d" || event.repeat || event.isComposing || event.ctrlKey || event.metaKey || event.altKey) return;
