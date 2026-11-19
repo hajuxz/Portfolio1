@@ -9,7 +9,7 @@ const fieldNames = {
 };
 const groups = {
   certificates:["title","issuer","date","document"],
-  profile:["name","headline","location","aboutTitle","aboutIntro","bio"],
+  profile:["name","headline","location","eyebrow","roles","availability","aboutTitle","aboutIntro","bio"],
   services:["title","description"], interests:["title","description"], projects:["title","category","year","image","alt","summary","detail","highlights","tags","url"],
   skills:["title","description","items"], journey:["title","date","organization","description","type"],
   contact:["email","intro","github","linkedin","website"], appearance:["accent","secondary"]

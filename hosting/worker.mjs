@@ -3,7 +3,7 @@ export default {
   async fetch(request, env) {
     const url = new URL(request.url);
     if (url.pathname !== "/api/portfolio") {
-      const asset = files[url.pathname === "/" ? "/index.html" : url.pathname];
+      const asset = files[url.pathname === "/" ? "/index.html" : url.pathname.replaceAll("%20"," ")];
       if (!asset || !["GET","HEAD"].includes(request.method)) return new Response(null,{status:404});
       const body = request.method === "HEAD" ? null : asset.base64 ? Uint8Array.from(atob(asset.base64),c=>c.charCodeAt(0)) : asset.text;
       return new Response(body,{headers:{"Content-Type":asset.base64 ? asset.mime : asset.mime+"; charset=utf-8","X-Content-Type-Options":"nosniff"}});

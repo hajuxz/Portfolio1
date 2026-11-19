@@ -18,7 +18,7 @@ The single page opens at `#home`. The other routes are `#about`, `#work`, `#skil
 - `dist/navigation.js` manages hash history, view transitions, focus, the sidebar, and the existing theme switch. `dist/navigation.css` styles the workspace.
 - `dist/index.html` contains the view panels. `dist/app.js` renders editable content and handles Quick Jump. `dist/content.js` defines default content and validates saved portfolios. In Studio, open **Skills** to edit categories and their comma-separated skills.
 - `dist/workspace-icons.js` contains the shared line icons. Bundled Simple Icons and local Inter and Space Mono font files are in `dist/assets/workspace/`.
-- Home opens on the sunglasses animation. Scrolling scrubs its 161 JPEG frames in either direction. The playback code is in `dist/sunglasses.js`, the layout in `dist/portrait.css`, and the frames in `dist/assets/sunglasses/`.
+- Home scrubs 161 paired JPEGs with scroll. Put the dark export in `dist/assets/frames/dark/` and the matching light export in `dist/assets/frames/white pic/`, named `ezgif-frame-001.jpg` through `ezgif-frame-161.jpg`. Edit `dist/sequence-config.js` for paths, frame count, focal point and theme fade duration. A blank light path derives both looks from the dark frames. Reduced motion keeps one still frame.
 
 ### Add a view
 

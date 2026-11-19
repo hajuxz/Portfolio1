@@ -105,10 +105,10 @@ function render(content) {
   const words = p.name.trim().split(/\s+/);
   const initials = [words[0]?.[0], words.length > 1 ? words.at(-1)[0] : ""].join("").toUpperCase();
   for (const id of ["mobileInitials","signatureInitials"]) byId(id).textContent = initials;
-  byId("homeTitle").textContent = p.name;
+  heroMedia.setProfile(p);
   portfolioNav.setProfile(p, content.contact);
   document.querySelector('meta[name="description"]').content = p.headline;
-  const values = {aboutTitle:p.aboutTitle, aboutIntro:p.aboutIntro, aboutBio:p.bio, contactIntro:content.contact.intro};
+  const values = {heroEducation:p.eyebrow, heroLocation:p.location, heroFocus:p.roles, heroAvailability:p.availability, aboutTitle:p.aboutTitle, aboutIntro:p.aboutIntro, aboutBio:p.bio, contactIntro:content.contact.intro};
   Object.entries(values).forEach(([id,value]) => byId(id).textContent = value);
   for (const [field, variable] of [["accent","--accent"],["secondary","--accent-2"]]) {
     const color = content.appearance[field];

@@ -16,7 +16,7 @@ const NAV_CONFIG = {
   social: {github: "", linkedin: "", email: ""},
   location: "", version: "v3.0",
   storageKey: "orbitfolio.theme", sidebarKey: "orbitfolio.sidebar.v1",
-  timing: {exit: 150, enter: 300, sidebar: 300, stagger: 60, theme: 600, icon: 300},
+  timing: {exit: 150, enter: 300, sidebar: 300, stagger: 60, theme: CROSSFADE_MS, icon: CROSSFADE_MS},
   ease: "cubic-bezier(0.22, 1, 0.36, 1)",
   colors: {
     light: {
@@ -37,6 +37,6 @@ const NAV_CONFIG = {
   const vars = obj => Object.entries(obj).map(([name,value]) => `--${name}:${value};`).join("");
   const timing = Object.fromEntries(Object.entries(NAV_CONFIG.timing).map(([k,v]) => ["nav-"+k,v+"ms"]));
   const style = document.createElement("style");
-  style.textContent = `:root{${vars(NAV_CONFIG.colors.light)}${vars(timing)}--nav-ease:${NAV_CONFIG.ease}}html[data-theme="dark"]{${vars(NAV_CONFIG.colors.dark)}}`;
+  style.textContent = `:root{${vars(NAV_CONFIG.colors.light)}${vars(timing)}--page-dark:${NAV_CONFIG.colors.dark.bg};--dots-dark:${NAV_CONFIG.colors.dark["grid-dot"]};--page-light:${NAV_CONFIG.colors.light.bg};--dots-light:${NAV_CONFIG.colors.light["grid-dot"]};--nav-ease:${NAV_CONFIG.ease}}html[data-theme="dark"]{${vars(NAV_CONFIG.colors.dark)}}`;
   document.head.append(style);
 }

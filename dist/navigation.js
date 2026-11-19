@@ -189,45 +189,75 @@ const portfolioNav = (() => {
     if (document.activeElement === document.body && !document.querySelector("dialog[open]")) el(current).querySelector("h1").focus({preventScroll:true});
   }),{once:true});
 
-  let transition;
-  function applyTheme(theme) {
-    root.dataset.theme = theme;
-    document.getElementById("themeLabel").textContent = theme === "dark" ? "Light" : "Dark";
-    themeButton.setAttribute("aria-pressed", String(theme === "dark"));
+  let desired = root.dataset.theme, running = null;
+  function announce(theme) {
+    desired = root.dataset.targetTheme = theme;
+    el("themeLabel").textContent = theme === "dark" ? "Light" : "Dark";
+    themeButton.setAttribute("aria-pressed",String(theme === "dark"));
     document.querySelector('meta[name="theme-color"]').content = config.colors[theme].bg;
+  }
+  function paintTheme(theme) {
+    root.dataset.theme = theme;
     document.dispatchEvent(new Event("portfolio:theme"));
   }
-  function toggleTheme() {
-    if (transition) {
-      transition.skipTransition();
-      transition.finished.then(toggleTheme);
+  function finish(job) {
+    if (running !== job) return;
+    running = null;
+    paintTheme(desired);
+    root.classList.remove("theme-fallback");
+    for (const animation of job.animations) animation.cancel();
+  }
+  function settle() {
+    if (!running) return;
+    const job=running;
+    cancelAnimationFrame(job.raf);
+    finish(job);
+  }
+  function fadeInterface(to) {
+    announce(to);
+    if (reduced.matches || document.hidden) { settle(); paintTheme(to); return; }
+    if (running) {
+      for (const animation of running.animations) {
+        if ((animation.playbackRate>0)!==(desired===running.to)) animation.reverse();
+      }
       return;
     }
-    const theme = root.dataset.theme === "dark" ? "light" : "dark";
-    const apply = () => {
-      applyTheme(theme);
-      try { localStorage.setItem(config.storageKey, theme); } catch {}
+    if (root.dataset.theme===to) return;
+    const job = running = {from:root.dataset.theme,to};
+    // Fixed controls stay interactive. Never snapshot or suspend the canvas.
+    // A second click changes only the destination of this reversible UI timeline.
+    root.classList.add("theme-fallback");
+    const timing={duration:CROSSFADE_MS,easing:HERO_CONFIG.ease,fill:"both"};
+    const visibleInk=[...document.querySelectorAll(".menu-trigger:not([hidden]),.sidebar-expanded .workspace-sidebar,main > .section:not([hidden]),dialog[open]")];
+    job.animations=visibleInk.map(el=>el.animate([{opacity:1},{opacity:0,offset:.5},{opacity:1}],timing));
+    // A timing-only animation also works when every optional panel is closed.
+    const clock = new Animation(new KeyframeEffect(null,[],timing),document.timeline);
+    job.animations.push(clock); clock.play();
+    const step = () => {
+      if (running!==job) return;
+      const palette=(clock.currentTime || 0)<CROSSFADE_MS/2 ? job.from : job.to;
+      if (root.dataset.theme!==palette) paintTheme(palette);
+      if (clock.playState==="finished") finish(job);
+      else job.raf=requestAnimationFrame(step);
     };
-    if (!document.startViewTransition || reduced.matches) { apply(); return; }
-    const box = themeButton.getBoundingClientRect();
-    const x = box.left + box.width / 2, y = box.top + box.height / 2;
-    const radius = Math.hypot(Math.max(x,innerWidth-x), Math.max(y,innerHeight-y));
-    root.classList.add("theme-wipe");
-    transition = document.startViewTransition(apply);
-    transition.ready.then(() => root.animate([
-      {clipPath:`circle(0px at ${x}px ${y}px)`},
-      {clipPath:`circle(${Math.ceil(radius)}px at ${x}px ${y}px)`}
-    ], {duration:config.timing.theme,easing:config.ease,pseudoElement:"::view-transition-new(root)"})).catch(()=>{});
-    transition.finished.finally(() => { transition = null; root.classList.remove("theme-wipe"); });
+    job.raf=requestAnimationFrame(step);
+  }
+  function toggleTheme() {
+    const next = desired==="dark" ? "light" : "dark";
+    try { localStorage.setItem(config.storageKey,next); } catch {}
+    fadeInterface(next);
   }
   function restoreTheme() {
     let saved;
-    try { saved = localStorage.getItem(config.storageKey); } catch {}
-    applyTheme(saved === "dark" || saved === "light" ? saved : systemTheme.matches ? "dark" : "light");
+    try { saved=localStorage.getItem(config.storageKey); } catch {}
+    fadeInterface(saved==="dark" || saved==="light" ? saved : systemTheme.matches ? "dark" : "light");
   }
-  themeButton.addEventListener("click", toggleTheme);
-  systemTheme.addEventListener("change", restoreTheme);
-  addEventListener("storage", e => { if (!e.key || e.key === config.storageKey) restoreTheme(); });
-  applyTheme(root.dataset.theme);
+  document.addEventListener("portfolio:view",settle);
+  document.addEventListener("visibilitychange",()=>{if(document.hidden) settle();});
+  reduced.addEventListener("change",()=>{if(reduced.matches) settle();});
+  themeButton.addEventListener("click",toggleTheme);
+  systemTheme.addEventListener("change",restoreTheme);
+  addEventListener("storage",event=>{ if(!event.key || event.key===config.storageKey) restoreTheme(); });
+  announce(desired);
   return {views,go,toggleTheme,setProfile,closeDrawer};
 })();

@@ -9,6 +9,7 @@
     />
     <meta name="theme-color" content="#f4f1e9" />
     <title>Christian Rey Adolfo — Home</title>
+    <script src="sequence-config.js"></script>
     <script src="navigation-config.js"></script>
     <script>
       (() => {
@@ -16,6 +17,10 @@
         try { saved = localStorage.getItem(NAV_CONFIG.storageKey); } catch {}
         const theme = saved === "dark" || saved === "light" ? saved : matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
         document.documentElement.dataset.theme = theme;
+        document.documentElement.dataset.targetTheme = theme;
+        const preload = document.createElement("link");
+        preload.rel = "preload"; preload.as = "image"; preload.href = frameURL(theme,1) || frameURL("dark",1);
+        document.head.append(preload);
         document.querySelector('meta[name="theme-color"]').content = NAV_CONFIG.colors[theme].bg;
       })();
     </script>
@@ -26,7 +31,7 @@
   <body>
     <a class="skip-link" href="#main-content">Skip to content</a>
     <button class="shell-pill menu-trigger" id="menuTrigger" type="button" aria-controls="workspaceSidebar" aria-expanded="false"><span data-icon="menu"></span>Menu</button>
-    <button class="shell-pill theme-trigger" id="themeToggle" type="button" aria-label="Toggle dark mode" aria-pressed="false"><span class="theme-icons"><i data-icon="moon"></i><i data-icon="sun"></i></span><span id="themeLabel">Dark</span></button>
+    <button class="shell-pill theme-trigger" id="themeToggle" type="button" aria-label="Toggle dark mode" aria-pressed="false"><span class="theme-icons"><i data-icon="moon"></i><i data-icon="sun"></i></span><span aria-hidden="true" class="theme-labels"><span>Dark</span><span>Light</span></span><span id="themeLabel" class="sr-only">Dark</span></button>
     <div class="drawer-backdrop" id="drawerBackdrop" hidden></div>
     <aside class="workspace-sidebar" id="workspaceSidebar" aria-labelledby="workspaceOwner" inert>
       <header class="workspace-head">
@@ -42,9 +47,28 @@
       </footer>
     </aside>
     <main id="main-content">
-      <section id="home" class="sunglasses-hero" data-view="home" aria-labelledby="homeTitle">
-        <h1 id="homeTitle" class="sr-only" tabindex="-1">Christian Rey Adolfo</h1>
-        <canvas id="sunglassesSequence" width="1280" height="720" role="img" aria-label="Portrait sequence of a man putting on sunglasses"></canvas>
+      <section id="home" class="sunglasses-hero" data-hero-media data-view="home" aria-labelledby="homeTitle">
+        <div id="heroStage" class="hero-stage">
+          <div class="hero-media" aria-hidden="true">
+            <div class="hero-framing" id="heroFraming">
+              <div class="hero-look" data-look="dark"><img alt="" fetchpriority="high"><canvas></canvas></div>
+              <div class="hero-look" data-look="light"><img alt="" fetchpriority="high"><canvas></canvas></div>
+            </div>
+          </div>
+          <div class="hero-copy">
+            <h1 id="homeTitle" class="hero-name" tabindex="-1"><span>Christian Rey</span><span>Adolfo</span></h1>
+            <ul class="hero-details">
+              <li><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M20 10c0 5-8 11-8 11S4 15 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="2.6"/></svg><span id="heroLocation">Bukidnon, Philippines</span></li>
+              <li><svg aria-hidden="true" viewBox="0 0 24 24"><path d="m2 9 10-5 10 5-10 5L2 9Zm4 2v6c4 3 8 3 12 0v-6m4-2v7"/></svg><span id="heroEducation">IT Student at Bukidnon State University</span></li>
+              <li><svg aria-hidden="true" viewBox="0 0 24 24"><path d="m7 7-5 5 5 5m10-10 5 5-5 5m-4-14-2 18"/></svg><span id="heroFocus">Web Development, Full-Stack and UI/UX</span></li>
+            </ul>
+          </div>
+          <aside class="hero-widgets" aria-label="Time and availability">
+            <div><span>Local time</span><strong id="localTime"></strong></div>
+            <div><span>Status</span><strong class="hero-status" id="heroAvailability"></strong></div>
+          </aside>
+          <div class="hero-guides" aria-hidden="true"></div>
+        </div>
       </section>
 
       <section class="about section" id="about" data-view="about" hidden aria-labelledby="aboutTitle">
@@ -263,6 +287,7 @@
     <script src="content.js"></script>
     <script src="workspace-icons.js"></script>
     <script src="navigation.js"></script>
+    <script src="hero.js"></script>
     <script src="app.js"></script>
     <script src="studio.js"></script>
     <script src="sunglasses.js"></script>

@@ -1790,18 +1790,6 @@ main { margin-left: 0; }
 .hero .eyebrow::before { display: none; }
 .hero__actions .button { min-height: 44px; padding-inline: 16px; border-radius: 5px; font-weight: 700; }
 .hero__visual { position: relative; isolation: isolate; }
-.portrait-toggle {
-  position: absolute; bottom: 5px; left: 5px; display: inline-flex; align-items: center; gap: 6px;
-  min-height: 38px; padding: 5px 9px; border: 1px solid #68685c; border-radius: 5px;
-  background: #1d1f20; color: #fafaf6; text-align: left; line-height: 1.12; cursor: pointer;
-}
-.portrait-toggle[hidden] { display: none; }
-.portrait-toggle svg { width: 14px; height: 14px; color: #ffdd65; flex: none; }
-.portrait-toggle strong, .portrait-toggle small { display: block; white-space: nowrap; }
-.portrait-toggle strong { font-size: 11px; font-weight: 650; }
-.portrait-toggle small { margin-top: 2px; font-size: 9px; color: #d4d4c8; }
-.portrait-toggle:hover { border-color: #d7c16c; }
-.portrait-toggle:focus-visible { outline: 2px solid #f9cf45; outline-offset: 2px; }
 .about { width: 100%; max-width: none; padding: clamp(48px,7vw,82px) max(5vw,calc((100% - 1060px)/2)); }
 .about .section-heading { margin-bottom: 32px; }
 .about .section-heading > p, .about .service-card p, .about #interestsGrid p, .about .kicker { color: var(--secondary); }
@@ -1868,8 +1856,6 @@ html[data-theme="dark"] .empty-state { grid-column: 1/-1; }
 @media (max-width: 680px) {
   .hero { grid-template-columns: minmax(0,1fr); width: 88%; padding-block: 100px 36px; gap: 24px; }
   .hero__visual { justify-self: start; margin-left: 7px; }
-  .hero__visual:has(.portrait-toggle:not([hidden])) { margin-bottom: 22px; }
-  .portrait-toggle { bottom: -22px; left: 0; gap: 4px; min-height: 44px; padding-inline: 6px; }
   .hero__meta { justify-content: flex-start; margin: 0; }
   .about { padding-inline: 6%; }
   .about .manifesto-card { min-height: 0; }
@@ -1882,7 +1868,7 @@ html[data-theme="dark"] .empty-state { grid-column: 1/-1; }
 @media (prefers-reduced-motion: no-preference) {
   .reveal.project-card { transition-delay: var(--card-delay,0ms); }
 }
-@media print { .signal-rail, .gallery-controls, .portrait-toggle { display: none; } }
+@media print { .signal-rail, .gallery-controls { display: none; } }
 
 @font-face {
   font-family: Anton;
@@ -1951,5 +1937,5 @@ body.at-hero :is(.signal-rail, .mobile-header, .mobile-nav, .noise) { visibility
 }
 @media print {
   .intro-hero { min-height: 0; padding-block: 30px; }
-  .intro-edit, .intro-switch { display: none; }
+  .intro-edit { display: none; }
 }

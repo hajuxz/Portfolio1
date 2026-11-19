@@ -62,44 +62,61 @@ try {
   };
   await cmd("Runtime.enable");
   await cmd("Page.enable");
-  // Record the original JPEG index actually painted, including reverse scrubs.
-  await cmd("Page.addScriptToEvaluateOnNewDocument",{source:`
-    window.sequenceDraws = [];
-    const paint = CanvasRenderingContext2D.prototype.drawImage;
-    CanvasRenderingContext2D.prototype.drawImage = function(image,...args) {
-      if (this.canvas.id === "sunglassesSequence") {
-        window.sequenceDraws.push(window.sunglassesFrames.indexOf(image.src.split(",")[1]));
-      }
-      return paint.call(this,image,...args);
-    };
-  `});
-  await cmd("Page.navigate",{url:origin+"/?scroll-frames#home"});
-  for (const width of [1280,390]) {
-    await cmd("Emulation.setDeviceMetricsOverride",{width,height:800,deviceScaleFactor:1,mobile:false});
-    await until(()=>evaluate('document.body.classList.contains("ready") && window.sunglassesFrames?.length === 161'));
-    try { await until(()=>evaluate('!scrollY && Math.abs(sunglassesSequence.getBoundingClientRect().top)<1 && sequenceDraws.at(-1)===0')); }
-    catch { assert.fail(JSON.stringify(await evaluate('({width:innerWidth,y:scrollY,stage:sunglassesSequence.getBoundingClientRect().toJSON(),home:home.getBoundingClientRect().toJSON(),frames:sequenceDraws.slice(-8),focus:document.activeElement.id,hash:location.hash})'))); }
-    assert.ok(await evaluate('home.contains(sunglassesSequence) && document.querySelectorAll("canvas").length===1 && !document.querySelector("#portraitFrame,#portraitToggle,.intro-copy,.intro-meta")'));
-    assert.ok(await evaluate('!performance.getEntriesByType("resource").some(r=>/portrait-normal|portrait-aura|three\\.module|gsap\\.min/.test(r.name))'));
-    for (const fraction of [0,.5,1,.25,0]) {
-      const previous = await evaluate('({index:sequenceDraws.at(-1),count:sequenceDraws.length})');
-      await evaluate(`(()=>{const end=document.documentElement.scrollHeight-innerHeight; scrollTo({top:end*${fraction},behavior:"instant"})})()`);
-      await until(()=>evaluate(`sequenceDraws.at(-1) === ${Math.round(fraction*160)} && Math.abs(sunglassesSequence.getBoundingClientRect().top)<2`));
-      if (previous.index != null) {
-        const direction = Math.sign(Math.round(fraction*160) - previous.index);
-        const drawn = await evaluate('sequenceDraws.slice('+previous.count+')');
-        assert.ok(drawn.every((n,i)=>direction*(n-(i ? drawn[i-1] : previous.index))>=0),"Scroll scrub must preserve frame order");
+  await cmd("Page.navigate",{url:origin+"/?sequence#home"});
+  await until(()=>evaluate('document.body.classList.contains("ready") && heroFraming.dataset.frame==="1"'));
+  const readFrame=()=>evaluate('Number(heroFraming.dataset.frame)');
+  const waitTheme=(theme)=>until(()=>evaluate('document.documentElement.dataset.targetTheme==='+JSON.stringify(theme)+' && !document.documentElement.matches(".theme-capture,.theme-fallback")'));
+  const goFrame=async index=>{
+    await evaluate('scrollTo({top:(home.offsetHeight-heroStage.clientHeight)*'+(index-1)+'/160,behavior:"instant"})');
+    await until(async()=>await readFrame()===index);
+  };
+  for(const [width,height] of [[1920,1080],[2560,1080],[1366,768],[768,1024],[390,844]]){
+    await cmd("Emulation.setDeviceMetricsOverride",{width,height,deviceScaleFactor:width===390?2:1,mobile:width===390});
+    await until(()=>evaluate('(()=>{const [a,b]=heroFraming.querySelectorAll("canvas"),r=a.getBoundingClientRect(),s=b.getBoundingClientRect(),stage=heroStage.getBoundingClientRect();return a.width===b.width && a.height===b.height && r.x===s.x && r.width===s.width && r.left<=stage.left+.1 && r.right>=stage.right-.1 && r.bottom>=stage.bottom-.1 && Math.abs(r.top-stage.top)<.1 && Math.abs(r.left+r.width*HERO_CONFIG.focal.x-document.documentElement.clientWidth/2)<.1})()'));
+    assert.ok(await evaluate('!document.querySelector("#portraitToggle") && homeTitle.children.length===2 && localTime.textContent.includes("PHT") && heroAvailability.textContent.length>0'));
+    console.log("Aligned and covered",width,height);
+  }
+  // Compare a downsample of each actual backing store to the matching photo on disk.
+  async function checkPair(index) {
+    const difference=await evaluate(`(async()=>{const c=document.createElement("canvas");c.width=32;c.height=18;const ctx=c.getContext("2d",{willReadFrequently:true});
+      const pixels=source=>{ctx.drawImage(source,0,0,32,18);return ctx.getImageData(0,0,32,18).data};
+      return Promise.all(["dark","light"].map(async theme=>{const img=new Image();img.src=frameURL(theme,${index});await img.decode();
+        const live=heroFraming.querySelector('[data-look="'+theme+'"] canvas');
+        const reference=document.createElement("canvas"); reference.width=live.width; reference.height=live.height;
+        reference.getContext("2d",{alpha:false}).drawImage(img,0,0,live.width,live.height);
+        const ref=pixels(reference),actual=pixels(live);
+        return ref.reduce((sum,n,i)=>sum+Math.abs(n-actual[i]),0)/ref.length;
+      }))})()`);
+    assert.ok(difference.every(n=>n<2),JSON.stringify({index,difference}));
+  }
+  for (const index of [1,65,161]) {
+    await goFrame(index); await checkPair(index);
+    const target=await evaluate('document.documentElement.dataset.targetTheme==="light"?"dark":"light"');
+    await evaluate('themeToggle.click()'); await waitTheme(target);
+    assert.equal(await readFrame(),index); await checkPair(index);
+    if (index===65) {
+      for (const [width,height] of [[1366,768],[390,844]]) {
+        await cmd("Emulation.setDeviceMetricsOverride",{width,height,deviceScaleFactor:width===390?2:1,mobile:width===390});
+        await delay(180); assert.equal(await readFrame(),65); await checkPair(65);
       }
     }
-    const draws=await evaluate('sequenceDraws.length');
-    await delay(160);
-    assert.equal(await evaluate('sequenceDraws.length'),draws);
-    console.log("Forward, reverse, endpoints and idle frame verified at",width);
+    assert.equal(await evaluate('themeLabel.textContent'),target==="light"?"Dark":"Light");
   }
+  await goFrame(65);
+  const before=await evaluate('document.documentElement.dataset.targetTheme');
+  const btn=await evaluate('(()=>{const b=themeToggle.getBoundingClientRect();return {x:b.x+b.width/2,y:b.y+b.height/2}})()');
+  async function pressTheme(){for(const type of ["mousePressed","mouseReleased"]) await cmd("Input.dispatchMouseEvent",{type,button:"left",clickCount:1,...btn});}
+  await pressTheme(); await delay(220);
+  const opacity=()=>evaluate('Number(getComputedStyle(heroFraming.lastElementChild).opacity)');
+  const middle=await opacity(); assert.ok(middle>0 && middle<1);
+  await pressTheme(); assert.equal(await evaluate('document.documentElement.dataset.targetTheme'),before);
+  assert.ok(Math.abs(await opacity()-middle)<.2); await waitTheme(before); assert.equal(await readFrame(),65);
+  await evaluate('themeToggle.click()'); await goFrame(100); await checkPair(100);
   await cmd("Emulation.setEmulatedMedia",{features:[{name:"prefers-reduced-motion",value:"reduce"}]});
-  await until(()=>evaluate('getComputedStyle(sunglassesSequence).backgroundImage.includes("last.jpg") && getComputedStyle(sunglassesSequence).position==="static" && getComputedStyle(home,"::after").display==="none" && sunglassesSequence.getContext("2d").getImageData(20,20,1,1).data[3]===0'));
+  try { await until(()=>evaluate('!home.hasAttribute("data-scrub")'),4000); } catch { assert.fail(JSON.stringify(await evaluate('({reduced:matchMedia("(prefers-reduced-motion: reduce)").matches,scrub:home.hasAttribute("data-scrub"),frame:heroFraming.dataset.frame,view:document.body.dataset.view})'))+JSON.stringify(errors)); }
+  const still=await readFrame(); await evaluate('themeToggle.click()'); await delay(150); assert.equal(await readFrame(),still);
   await cmd("Emulation.setEmulatedMedia",{features:[]});
-  await cmd("Emulation.setDeviceMetricsOverride",{width:1280,height:800,deviceScaleFactor:1,mobile:false});
+  console.log("Paired frames 1, 65, 161, rapid reversal, live scroll during fade and reduced motion passed.");
   const active = () => evaluate('document.body.dataset.view');
   async function clickVisible(selector) {
     const position = await until(()=>evaluate(`(async()=>{
@@ -118,6 +135,7 @@ try {
     const code={Escape:27,Tab:9,ArrowDown:40,ArrowUp:38,Enter:13,k:75}[key];
     for (const type of ["keyDown","keyUp"]) await cmd("Input.dispatchKeyEvent",{type,key,modifiers,windowsVirtualKeyCode:code});
   };
+  await cmd("Emulation.setDeviceMetricsOverride",{width:1366,height:768,deviceScaleFactor:1,mobile:false});
   await cmd("Page.navigate",{url:origin+"/#skills"});
   await until(()=>evaluate('document.body.classList.contains("ready") && document.body.dataset.view==="skills"'));
   assert.equal(await evaluate('workspaceSidebar.inert'),false);
@@ -143,7 +161,7 @@ try {
     await cmd("Emulation.setDeviceMetricsOverride",{width,height:850,deviceScaleFactor:1,mobile:false});
     for (const theme of ["light","dark"]) {
       if (await evaluate('document.documentElement.dataset.theme') !== theme) await clickVisible("#themeToggle");
-      await until(()=>evaluate(`document.documentElement.dataset.theme===${JSON.stringify(theme)} && !document.documentElement.classList.contains("theme-wipe")`));
+      await until(()=>evaluate(`document.documentElement.dataset.theme===${JSON.stringify(theme)} && !document.documentElement.matches(".theme-capture,.theme-fallback")`));
       for (const view of ["about","work","skills","journey","contact","home"]) {
         if (await evaluate('workspaceSidebar.inert')) await clickVisible("#menuTrigger");
         await clickVisible('[data-route="'+view+'"]');
@@ -179,8 +197,7 @@ try {
   await cmd("Page.navigate",{url:origin+"/?theme#skills"});
   await until(()=>evaluate('document.body.classList.contains("ready") && themeLabel.textContent==="Light" && themeToggle.getAttribute("aria-pressed")==="true"'));
   await keypress("k",2); await cmd("Input.insertText",{text:"tgldrk"}); await keypress("Enter");
-  await until(()=>evaluate('document.getAnimations().some(a=>a.effect?.getKeyframes().some(k=>k.clipPath?.startsWith("circle(")))'));
-  await until(()=>evaluate('themeLabel.textContent==="Dark" && localStorage.getItem(NAV_CONFIG.storageKey)==="light" && !document.documentElement.classList.contains("theme-wipe")'));
+  await until(()=>evaluate('themeLabel.textContent==="Dark" && localStorage.getItem(NAV_CONFIG.storageKey)==="light" && !document.documentElement.matches(".theme-capture,.theme-fallback")'));
   await cmd("Emulation.setEmulatedMedia",{features:[{name:"prefers-reduced-motion",value:"reduce"}]});
   await evaluate('portfolioNav.go("journey")');
   assert.ok(await evaluate('document.activeElement===journeyTitle && !journey.hidden && !journey.getAnimations().length'));
@@ -219,11 +236,11 @@ try {
   await cmd("Emulation.setDeviceMetricsOverride",{width:390,height:850,deviceScaleFactor:1,mobile:false});
   await evaluate(`if (document.documentElement.dataset.theme === "light") document.getElementById("themeToggle").click();
     document.querySelector(".filter-button").click();`);
-  await until(()=>evaluate('!document.documentElement.classList.contains("theme-wipe") && !document.querySelector(".gallery-controls").hidden && !document.getElementById("nextProject").disabled'));
+  await until(()=>evaluate('!document.documentElement.matches(".theme-capture,.theme-fallback") && !document.querySelector(".gallery-controls").hidden && !document.getElementById("nextProject").disabled'));
   await evaluate('document.getElementById("nextProject").click()');
   await until(()=>evaluate('document.getElementById("projectsList").scrollLeft > 50'));
   await evaluate('document.getElementById("themeToggle").click()');
-  await until(()=>evaluate('document.querySelector(".gallery-controls").hidden && !document.documentElement.classList.contains("theme-wipe")'));
+  await until(()=>evaluate('document.querySelector(".gallery-controls").hidden && !document.documentElement.matches(".theme-capture,.theme-fallback")'));
   await cmd("Emulation.setEmulatedMedia",{features:[{name:"prefers-reduced-motion",value:"reduce"}]});
   await cmd("Page.navigate",{url:origin+"/#home"});
   await until(()=>evaluate('document.body.classList.contains("ready") && !home.hidden'));

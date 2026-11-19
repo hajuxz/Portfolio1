@@ -1,130 +1,179 @@
 "use strict";
 
 (() => {
-  const canvas = document.getElementById("sunglassesSequence");
-  const hero = document.getElementById("home");
-  const motion = matchMedia("(prefers-reduced-motion: reduce)");
-  const context = canvas.getContext("2d");
-  if (!context) { canvas.dataset.still = ""; return; }
-
-  const cache = new Map(), loading = new Set(), failed = new Set();
-  let bundle, nearby = false, active = false, generation = 0;
-  let frame = 0, target = 0, position = 0, painted = -1, direction = 1;
-  let lastTick = 0, measure = true;
-
-  // Fetch all compressed JPEGs once. Keep only a small playback window decoded.
-  // A classic script also works when the portfolio is opened directly from disk.
-  function loadBundle() {
-    if (bundle) return bundle;
-    const script = document.createElement("script");
-    bundle = new Promise((resolve,reject) => {
-      script.onload = resolve;
-      script.onerror = reject;
-      script.src = "assets/sunglasses/frames.js";
-      document.head.append(script);
-    }).finally(() => script.remove());
-    return bundle;
+  const home = document.getElementById("home"), stage = document.getElementById("heroStage");
+  const framing = document.getElementById("heroFraming");
+  const reduced = matchMedia("(prefers-reduced-motion: reduce)");
+  const layers = Array.from(framing.children, el => ({
+    theme: el.dataset.look, poster: el.querySelector("img"), canvas: el.querySelector("canvas"),
+    ctx: el.querySelector("canvas").getContext("2d",{alpha:false})
+  }));
+  for (const {theme,poster} of layers) {
+    poster.src = frameURL(theme,1) || frameURL("dark",1);
+    if (theme === "light" && !FRAME_PATH.light) poster.classList.add("derived-light");
+    poster.onerror = () => {
+      if (theme !== "light") return;
+      poster.onerror = null; poster.classList.add("derived-light"); poster.src = frameURL("dark",1);
+    };
   }
-  function wake() {
-    if (active && !frame) frame = requestAnimationFrame(tick);
+  if (layers.some(layer => !layer.ctx)) return; // The first-frame images are always underneath.
+
+  const compressed = new Map(), decoded = new Map(), pending = new Set(), failed = new Set();
+  // Keep the scroll-to-frame mapping stable when rotating or resizing the viewport.
+  home.style.setProperty("--scrub-travel", Math.max(1500,innerHeight*2.4)+"px");
+  const http = /^https?:$/.test(location.protocol);
+  let lastWidth = 0, lastHeight = 0;
+  let currentFrame = 1, target = 1, position = 1, direction = 1, lastTick = 0;
+  let raf = 0, active = false, nearby = false, dirtyScroll = true, dirtySize = true;
+  let idleTimer = 0, warming = false, warmIndex = 2, generation = 0;
+
+  // Keep only compressed bytes for the full sequence, with at most eight decoded pairs.
+  // A foreground decode reuses an in-flight background request for the same JPEG.
+  function bytes(url, priority) {
+    if (!compressed.has(url)) {
+      const request = fetch(url,{priority}).then(response => {
+        if (!response.ok) throw Error("Missing frame");
+        return response.blob();
+      }).catch(error => { compressed.delete(url); throw error; });
+      compressed.set(url,request);
+    }
+    return compressed.get(url);
   }
-  function decode(index) {
-    const version = generation;
+  async function readImage(url) {
     const image = new Image();
     image.decoding = "async";
-    loading.add(index);
-    image.src = "data:image/jpeg;base64," + globalThis.sunglassesFrames[index];
-    image.decode().then(() => {
-      if (version === generation) cache.set(index,image);
-    }).catch(() => {
-      if (version === generation) failed.add(index);
-    }).finally(() => {
-      if (version !== generation) return;
-      loading.delete(index);
-      wake();
+    const src = http ? URL.createObjectURL(await bytes(url,"high")) : url;
+    try { image.src = src; await image.decode(); return image; }
+    finally { if (http) URL.revokeObjectURL(src); }
+  }
+  async function loadPair(index) {
+    const results = await Promise.all(layers.map(async ({theme,poster}) => {
+      const url = frameURL(theme,index);
+      if (!url) return null;
+      try {
+        if (index === 1) { await poster.decode(); return poster; }
+        return await readImage(url);
+      } catch { return null; }
+    }));
+    if (!results[0] && !results[1]) throw Error("Frame unavailable");
+    return results;
+  }
+  function wake() { if (active && !raf) raf = requestAnimationFrame(tick); }
+  function requestPair(index) {
+    if (decoded.has(index) || pending.has(index) || failed.has(index)) return;
+    pending.add(index);
+    const ticket = generation;
+    loadPair(index).then(pair => {
+      if (ticket === generation) decoded.set(index,pair);
+    }).catch(() => { if (ticket === generation) failed.add(index); }).finally(() => {
+      if (ticket === generation) { pending.delete(index); wake(); }
     });
   }
-  function warmWindow(index,last) {
-    const wanted = new Set([index,Math.round(target)]);
-    for (let i = 1; i <= 8; i++) {
-      wanted.add(index + direction*i);
-      if (i <= 3) wanted.add(index - direction*i);
+  function schedulePrefetch() {
+    if (!active || reduced.matches || !http || warming || idleTimer || warmIndex > FRAME_COUNT || navigator.connection?.saveData) return;
+    idleTimer = setTimeout(async () => {
+      idleTimer = 0;
+      if (!active || reduced.matches) return;
+      if (position !== target || pending.size) { schedulePrefetch(); return; }
+      warming = true;
+      const index = warmIndex++;
+      await Promise.allSettled(layers.map(({theme}) => frameURL(theme,index)).filter(Boolean).map(url => bytes(url,"low")));
+      warming = false;
+      schedulePrefetch();
+    },75);
+  }
+  function warm(index) {
+    const wanted = new Set([index,Math.round(target),currentFrame]);
+    if (!reduced.matches) {
+      for (let step=1; wanted.size<HERO_CONFIG.cachePairs && step<FRAME_COUNT; step++) {
+        const next=index+step*direction, back=index-step;
+        if (next>=1 && next<=FRAME_COUNT) wanted.add(next);
+        if (step===1 && back>=1 && back<=FRAME_COUNT) wanted.add(back);
+        if (next<1 || next>FRAME_COUNT) break;
+      }
     }
-    // Retain the displayed frame until its replacement is ready.
-    for (const key of cache.keys()) if (key !== painted && !wanted.has(key)) cache.delete(key);
-    for (const key of wanted) {
-      if (loading.size >= 3) break;
-      if (key >= 0 && key <= last && !cache.has(key) && !loading.has(key) && !failed.has(key)) decode(key);
-    }
+    for (const key of decoded.keys()) if (!wanted.has(key)) decoded.delete(key);
+    for (const key of wanted) { if (pending.size>=2) break; requestPair(key); }
+  }
+  function draw(index) {
+    const pair = decoded.get(index);
+    // Size both buffers in the same paint, capped at the actual detail in the source.
+    const density = Math.min(devicePixelRatio || 1,HERO_CONFIG.maxDpr);
+    const width = Math.max(1,Math.min(HERO_CONFIG.width,Math.ceil(framing.offsetWidth*density)));
+    const height = Math.max(1,Math.round(width*HERO_CONFIG.height/HERO_CONFIG.width));
+    layers.forEach(({ctx,canvas},i) => {
+      if (canvas.width!==width || canvas.height!==height) { canvas.width=width; canvas.height=height; }
+      const derived = i===1 && (!pair[i] || pair[i].classList?.contains("derived-light"));
+      ctx.filter = derived ? "brightness(1.5) contrast(.86)" : "none";
+      ctx.drawImage(pair[i] || pair[1-i],0,0,width,height);
+    });
+    currentFrame = index; // The only displayed index. Theme changes never touch playback.
+    framing.dataset.frame = String(index);
+    framing.dataset.painted = "";
+    dirtySize = false;
   }
   function tick(now) {
-    frame = 0;
-    const frames = globalThis.sunglassesFrames;
-    if (!active || !frames?.length) return;
-    const last = frames.length - 1;
-    if (measure) {
-      const bounds = hero.getBoundingClientRect();
-      const travel = Math.max(1,bounds.height - canvas.clientHeight);
-      const next = last * Math.max(0,Math.min(1,-bounds.top / travel));
+    raf = 0;
+    if (!active) return;
+    if (dirtyScroll) {
+      const rect = home.getBoundingClientRect();
+      const width = stage.clientWidth, height = stage.clientHeight;
+      const travel = Math.max(1,rect.height-height);
+      const resized = lastWidth && (width!==lastWidth || height!==lastHeight);
+      lastWidth = width; lastHeight = height;
+      // Some mobile browsers adjust scrollY on rotation. Restore the logical
+      // position before interpreting that automatic scroll as a user scrub.
+      if (resized && !reduced.matches) {
+        const top = scrollY+rect.top+travel*(target-1)/Math.max(1,FRAME_COUNT-1);
+        if (Math.abs(scrollY-top)>1) window.scrollTo({top,behavior:"instant"});
+      }
+      const progress = resized ? (target-1)/Math.max(1,FRAME_COUNT-1) : Math.min(1,Math.max(0,-rect.top/travel));
+      const next = reduced.matches ? currentFrame : 1+(FRAME_COUNT-1)*progress;
       if (next !== target) direction = Math.sign(next-target);
-      target = next;
-      measure = false;
+      target = next; dirtyScroll = false;
     }
     const elapsed = Math.min(64,lastTick ? now-lastTick : 16.7);
-    lastTick = now;
-    position += (target-position) * (1-Math.exp(-elapsed/75));
-    if (Math.abs(target-position) < .035) position = target;
+    position += (target-position)*(1-Math.exp(-elapsed/HERO_CONFIG.scrubLagMs));
+    if (Math.abs(target-position)<.035) position=target;
     const index = Math.round(position);
-    warmWindow(index,last);
-    // Draw only between the current pixels and the playhead. A prefetched endpoint
-    // must never flash early and then jump backwards when a closer frame decodes.
-    let best = painted;
-    for (const key of cache.keys()) {
-      if (painted < index && key > best && key <= index) best = key;
-      if (painted > index && key < best && key >= index) best = key;
+    warm(index);
+    // Keep the last good pair on screen while fast scrolling or on a slow connection.
+    let best = currentFrame;
+    for (const key of decoded.keys()) {
+      if (currentFrame<index && key>best && key<=index) best=key;
+      if (currentFrame>index && key<best && key>=index) best=key;
     }
-    if (best >= 0 && best !== painted) {
-      context.drawImage(cache.get(best),0,0,canvas.width,canvas.height);
-      painted = best;
-    }
-    if (position !== target) wake();
-    else lastTick = 0;
+    if (decoded.has(best) && (best!==currentFrame || dirtySize)) draw(best);
+    lastTick = position===target ? 0 : now;
+    if (lastTick) wake(); else schedulePrefetch();
   }
-  function invalidate() { measure = true; wake(); }
-  function updateActivity() {
-    const next = nearby && document.body.dataset.view === "home" && !motion.matches && !document.hidden;
-    if (!next && (motion.matches || document.body.dataset.view !== "home") && painted !== -1) {
-      context.clearRect(0,0,canvas.width,canvas.height);
-      painted = -1;
-      position = target = 0;
+  function invalidate() {
+    const scrub = !reduced.matches;
+    if (home.hasAttribute("data-scrub")!==scrub) {
+      home.toggleAttribute("data-scrub",scrub);
+      if (!scrub) position=target=currentFrame;
     }
+    dirtyScroll = true; wake();
+  }
+  function activity() {
+    invalidate();
+    const next = nearby && !home.hidden && !document.hidden;
     if (next === active) return;
     active = next;
-    if (active) {
-      measure = true;
-      loadBundle().then(() => {
-        delete canvas.dataset.still;
-        invalidate();
-      }).catch(() => { bundle = undefined; canvas.dataset.still = ""; });
-    } else {
-      generation++;
-      cancelAnimationFrame(frame);
-      frame = lastTick = 0;
-      cache.clear();
-      loading.clear();
-      failed.clear();
+    if (active) { dirtySize = true; invalidate(); }
+    else {
+      generation++; cancelAnimationFrame(raf); clearTimeout(idleTimer);
+      raf = idleTimer = lastTick = 0; pending.clear(); failed.clear();
+      for (const index of decoded.keys()) if (index!==currentFrame) decoded.delete(index);
     }
   }
-  new IntersectionObserver(([entry]) => {
-    nearby = entry.isIntersecting;
-    updateActivity();
-  },{rootMargin:"55% 0px"}).observe(canvas);
-  const resize = new ResizeObserver(invalidate);
-  resize.observe(hero);
-  resize.observe(canvas);
+  new IntersectionObserver(([entry]) => { nearby=entry.isIntersecting; activity(); }).observe(stage);
+  new ResizeObserver(()=>{ dirtySize=true; invalidate(); }).observe(framing);
+  new ResizeObserver(invalidate).observe(home);
   window.addEventListener("scroll",invalidate,{passive:true});
-  window.addEventListener("resize",invalidate);
-  document.addEventListener("portfolio:view",updateActivity);
-  document.addEventListener("visibilitychange",updateActivity);
-  motion.addEventListener("change",updateActivity);
+  window.addEventListener("resize",()=>{ dirtySize=true; invalidate(); });
+  document.addEventListener("portfolio:view",activity);
+  document.addEventListener("visibilitychange",activity);
+  reduced.addEventListener("change",()=>{ if (reduced.matches) position=target=currentFrame; activity(); });
+  activity();
 })();
