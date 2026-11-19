@@ -34,9 +34,12 @@
       {title: "Studio Board", category: "Product design", year: "Study 03", summary: "A project dashboard for independent studios to keep briefs, reviews and next steps together.", detail: "The concept centers on one question at the beginning of a studio day: what needs attention? A focused brief and a short list of review items take priority over secondary statistics.", highlights: "One place for the current brief\nReview items grouped by project\nReusable components for smaller teams", tags: "Design systems, Workflow, Interface", image: "assets/project-studio.svg", alt: "Studio Board interface concept with project and review panels", url: ""}
     ],
     skills: [
-      {title: "Design", description: "From early sketches to reusable interface components.", items: "Figma, Prototyping, Typography, Accessibility"},
-      {title: "Development", description: "Building responsive experiences for the browser.", items: "JavaScript, HTML, CSS, React, Git"},
-      {title: "Data & systems", description: "Structuring information and making patterns legible.", items: "SQL, Data modeling, API design, Charts"}
+      {title: "AI Tools", description: "", items: "AI literacy, Responsible AI use"},
+      {title: "Frontend", description: "", items: "JavaScript, HTML, CSS, React"},
+      {title: "Backend", description: "", items: ""},
+      {title: "APIs", description: "", items: "API design"},
+      {title: "Database", description: "", items: "SQL, Data modeling"},
+      {title: "Professional & Core", description: "", items: "Figma, Prototyping, Typography, Accessibility, Git, Charts"}
     ],
     certificates: [
       {title:certificateLibrary[0].title,issuer:"Mapúa University · CHED ACHIEVE",date:"14 September 2026",document:certificateLibrary[0].file},
@@ -64,6 +67,11 @@
     location: "Philippines", eyebrow: "Independent designer & developer", roles: "web applications, design systems, digital products"
   };
   const assetNames = new Set([defaults.profile.portrait, defaults.profile.auraPortrait, previousProfile.portrait, previousProfile.auraPortrait, "assets/portrait-placeholder.svg", ...defaults.projects.map(p => p.image)]);
+  const previousSkills = [
+      {title: "Design", description: "From early sketches to reusable interface components.", items: "Figma, Prototyping, Typography, Accessibility"},
+      {title: "Development", description: "Building responsive experiences for the browser.", items: "JavaScript, HTML, CSS, React, Git"},
+      {title: "Data & systems", description: "Structuring information and making patterns legible.", items: "SQL, Data modeling, API design, Charts"}
+    ];
   function validate(value) {
     function check(item, template, path) {
       if (path === "profile" && value.version === 1 && item && typeof item === "object") {
@@ -104,7 +112,9 @@
       if (["name","title"].includes(key) && !item.trim()) throw Error("Please fill in " + path);
       return item;
     }
-    return check(value, defaults, "");
+    const checked = check(value, defaults, "");
+    if (JSON.stringify(checked.skills) === JSON.stringify(previousSkills)) checked.skills = copy(defaults.skills);
+    return checked;
   }
   globalThis.PortfolioContent = {defaults, copy, safeURL, validate, certificateLibrary};
 })();

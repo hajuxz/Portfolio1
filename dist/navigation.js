@@ -3,160 +3,191 @@
 const portfolioNav = (() => {
   const config = NAV_CONFIG;
   const root = document.documentElement;
-  const nav = document.getElementById("primaryNav");
-  const row = nav.querySelector(".primary-row"), links = nav.querySelector(".nav-links");
-  const indicator = links.querySelector(".nav-indicator"), divider = nav.querySelector(".nav-divider");
-  const themeButton = nav.querySelector(".nav-theme"), burger = nav.querySelector(".nav-menu-toggle");
-  const menu = document.getElementById("navMenu"), panel = menu.firstElementChild;
-  const mobile = matchMedia("(width < 768px)"), reduced = matchMedia("(prefers-reduced-motion: reduce)");
+  const el = id => document.getElementById(id);
+  const sidebar = el("workspaceSidebar"), nav = el("primaryNav");
+  const menu = el("menuTrigger"), backdrop = el("drawerBackdrop"), main = el("main-content");
+  const themeButton = el("themeToggle"), marker = nav.querySelector(".route-marker");
+  const mobile = matchMedia("(width < 1024px)");
+  const reduced = matchMedia("(prefers-reduced-motion: reduce)");
   const systemTheme = matchMedia("(prefers-color-scheme: dark)");
-  const items = new Map(), sections = [];
-  let active, hover, contact, menuOpen = false, scrollTarget = null, observer;
+  const views = config.views.filter(view => !view.feature || config.features[view.feature]);
+  const links = new Map();
+  let current, target, animation, sequence = 0, pending = Promise.resolve();
+  let owner = el("workspaceOwner").textContent, drawer = false, preferences = {};
 
-  for (const [index, item] of config.sections.entries()) {
-    const section = document.getElementById(item.id);
-    if (!section) continue;
-    const link = document.createElement("a");
-    link.href = "#" + item.id;
-    link.textContent = item.label;
-    link.dataset.sectionLink = section.id;
-    link.style.setProperty("--order", index);
-    if (item.cta) {
-      contact = link;
-      link.className = "nav-cta";
-      const arrow = document.createElement("span");
-      arrow.setAttribute("aria-hidden","true");
-      arrow.textContent = "↗";
-      link.append(arrow);
-    } else {
-      links.append(link);
-      link.addEventListener("pointerenter", e => {
-        if (e.pointerType !== "touch") { hover = link; positionIndicator(); }
-      });
+  try { preferences = JSON.parse(localStorage.getItem(config.sidebarKey)) || {}; } catch {}
+  if ("scrollRestoration" in history) history.scrollRestoration = "manual";
+  for (const placeholder of document.querySelectorAll("[data-icon]")) placeholder.append(workspaceIcon(placeholder.dataset.icon));
+  el("workspaceStatus").textContent = config.status.text;
+  el("workspaceStatus").hidden = !config.status.enabled;
+  el("workspaceVersion").textContent = config.version;
+  el("shortcutBadge").textContent = /Mac|iPhone|iPad/.test(navigator.platform) ? "⌘ K" : "Ctrl K";
+
+  for (const group of new Set(views.map(view => view.group))) {
+    const heading = document.createElement("p");
+    heading.className = "workspace-group";
+    heading.textContent = group;
+    nav.append(heading);
+    for (const view of views.filter(item => item.group === group)) {
+      const a = document.createElement("a");
+      a.href = "#" + view.id;
+      a.dataset.route = view.id;
+      a.append(workspaceIcon(view.icon),document.createTextNode(view.label));
+      links.set(view.id,a);
+      nav.append(a);
     }
-    items.set(section.id, link);
-    sections.push(section);
   }
 
-  function positionIndicator() {
-    if (mobile.matches) return;
-    const focused = links.querySelector("a:focus-visible");
-    const target = hover || focused || items.get(active);
-    if (!target || target === contact) { indicator.style.opacity = "0"; return; }
-    const bounds = target.getBoundingClientRect();
-    indicator.style.width = bounds.width + "px";
-    indicator.style.transform = "translateX(" + (bounds.left - links.getBoundingClientRect().left) + "px)";
-    indicator.style.opacity = "1";
+  function setProfile(profile,contact) {
+    owner = profile.name;
+    el("workspaceOwner").textContent = owner;
+    el("workspaceLocation").textContent = config.location || profile.location;
+    el("workspaceSocials").replaceChildren(...Object.entries(config.social).map(([type,override]) => {
+      const value = override || contact[type];
+      const label = {github:"GitHub",linkedin:"LinkedIn",email:"Email"}[type];
+      const url = type === "email" ? (value ? "mailto:" + encodeURIComponent(value.replace(/^mailto:/i,"")) : "") : PortfolioContent.safeURL(value);
+      const item = document.createElement(url ? "a" : "button");
+      item.className = "social-tile";
+      item.title = url ? label : label + " link has not been added";
+      item.setAttribute("aria-label",item.title);
+      if (url) {
+        item.href = url;
+        if (type !== "email") { item.target = "_blank"; item.rel = "noopener noreferrer"; }
+      } else item.disabled = true;
+      item.append(workspaceIcon(type === "email" ? "mail" : type));
+      return item;
+    }));
+    updateTitle();
   }
-  function setActive(id) {
-    if (id === active) return;
-    items.get(active)?.removeAttribute("aria-current");
-    active = id;
-    items.get(id)?.setAttribute("aria-current","page");
-    positionIndicator();
+  function updateTitle() {
+    if (current) document.title = owner + " — " + views.find(v => v.id === current).label;
   }
-  function readSection() {
-    const bottom = scrollY > 0 && Math.ceil(scrollY + innerHeight) >= root.scrollHeight - 1;
-    const marker = Math.max(config.scrollOffset + 1, innerHeight * .24);
-    const section = bottom ? sections.at(-1) : sections.filter(s => s.getBoundingClientRect().top <= marker).at(-1);
-    setActive((section || sections[0]).id);
+  function moveMarker() {
+    const link = links.get(current);
+    if (link) marker.style.transform = "translateY(" + link.offsetTop + "px)";
   }
-  function observeSections() {
-    observer?.disconnect();
-    const marker = Math.min(innerHeight - 2, Math.max(config.scrollOffset + 1, Math.round(innerHeight * .24)));
-    observer = new IntersectionObserver(readSection, {rootMargin: `-${marker}px 0px -${innerHeight-marker-2}px 0px`});
-    sections.forEach(s => observer.observe(s));
-    readSection();
+  function updateShell() {
+    const view = views.find(v => v.id === current);
+    const expanded = mobile.matches ? drawer : !(preferences[current] ?? view?.collapsed ?? false);
+    const modal = mobile.matches && drawer;
+    document.body.classList.toggle("sidebar-expanded",expanded);
+    document.body.classList.toggle("drawer-open",modal);
+    sidebar.inert = !expanded;
+    if (modal) { sidebar.setAttribute("role","dialog"); sidebar.setAttribute("aria-modal","true"); }
+    else { sidebar.removeAttribute("role"); sidebar.removeAttribute("aria-modal"); }
+    menu.hidden = expanded;
+    menu.setAttribute("aria-expanded",String(expanded));
+    main.inert = modal;
+    themeButton.inert = modal;
+    document.querySelector(".skip-link").inert = modal;
+    backdrop.hidden = !modal;
+    moveMarker();
   }
-  function setMenu(open, restoreFocus = false) {
-    menuOpen = open;
-    nav.classList.toggle("menu-open", open);
-    root.classList.toggle("nav-locked", open);
-    menu.inert = !open;
-    burger.setAttribute("aria-expanded", String(open));
-    burger.setAttribute("aria-label", open ? "Close navigation" : "Open navigation");
-    if (open) nav.classList.remove("nav-away");
-    if (restoreFocus) burger.focus({preventScroll:true});
+  function setSidebar(open,restore = true) {
+    if (mobile.matches) drawer = open;
+    else {
+      preferences[current] = !open;
+      try { localStorage.setItem(config.sidebarKey,JSON.stringify(preferences)); } catch {}
+    }
+    updateShell();
+    if (restore) (open ? el("closeSidebar") : menu).focus({preventScroll:true});
   }
-  function layout() {
-    setMenu(false);
-    hover = null;
-    if (mobile.matches) panel.append(links, contact);
-    else { row.insertBefore(links, divider); row.append(contact); }
-    positionIndicator();
+  function closeDrawer(restore = false) {
+    if (drawer) setSidebar(false,restore);
   }
-  burger.addEventListener("click", () => setMenu(!menuOpen));
-  document.addEventListener("pointerdown", e => { if (menuOpen && !nav.contains(e.target)) setMenu(false); });
-  document.addEventListener("focusin", e => { if (menuOpen && !nav.contains(e.target)) setMenu(false); });
-  nav.addEventListener("focusin", () => { nav.classList.remove("nav-away"); positionIndicator(); });
-  document.addEventListener("keydown", e => {
-    if (menuOpen && e.key === "Escape") { e.preventDefault(); setMenu(false, true); }
+  menu.onclick = () => setSidebar(true);
+  el("closeSidebar").onclick = () => setSidebar(false);
+  backdrop.onclick = () => closeDrawer(true);
+  sidebar.addEventListener("keydown",event => {
+    if (!drawer) return;
+    if (event.key === "Escape") { event.preventDefault(); closeDrawer(true); }
+    if (event.key !== "Tab") return;
+    const items = [...sidebar.querySelectorAll("a[href],button:enabled")];
+    const first = items[0], last = items.at(-1);
+    if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+    else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
   });
-  links.addEventListener("pointerleave", () => { hover = null; positionIndicator(); });
-  links.addEventListener("focusout", () => requestAnimationFrame(positionIndicator));
-  nav.addEventListener("click", e => {
-    const link = e.target.closest("a[href^='#']");
-    if (!link || e.button || e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return;
-    const section = document.getElementById(link.hash.slice(1));
-    if (!section) return;
-    e.preventDefault();
-    setMenu(false);
-    scrollTarget = section;
-    nav.classList.remove("nav-away");
-    if (location.hash !== link.hash) history.pushState(null, "", link.hash);
-    section.setAttribute("tabindex","-1");
-    section.focus({preventScroll:true});
-    // Unlock the viewport before measuring. ScrollTrigger may also refresh on a breakpoint change.
-    requestAnimationFrame(() => {
-      if (scrollTarget !== section) return;
-      window.scrollTo({top:destination(section),behavior:reduced.matches ? "instant" : "smooth"});
-      scheduleScrollEnd();
-    });
+  mobile.addEventListener("change",() => {
+    drawer = false;
+    updateShell();
+    if (sidebar.inert && sidebar.contains(document.activeElement)) menu.focus();
   });
+  new ResizeObserver(moveMarker).observe(nav);
 
-  let lastY = Math.max(0,scrollY), lastTime = performance.now(), pending = false, scrollEnd;
-  function destination(section) {
-    return Math.max(0,Math.min(root.scrollHeight-root.clientHeight, scrollY + section.getBoundingClientRect().top - config.scrollOffset));
+  function show(id,focus = true) {
+    current = id;
+    for (const panel of main.querySelectorAll(":scope > [data-view]")) panel.hidden = panel.dataset.view !== id;
+    for (const [key,link] of links) {
+      if (key === id) link.setAttribute("aria-current","page");
+      else link.removeAttribute("aria-current");
+    }
+    document.body.dataset.view = id;
+    updateShell();
+    updateTitle();
+    portraitSwitch.setHeroVisible(id === "home");
+    window.scrollTo({top:0,behavior:"instant"});
+    if (focus && !document.querySelector("dialog[open]")) el(id).querySelector("h1").focus({preventScroll:true});
+    document.dispatchEvent(new CustomEvent("portfolio:view",{detail:id}));
   }
-  function scheduleScrollEnd() {
-    clearTimeout(scrollEnd);
-    scrollEnd = setTimeout(() => {
-      // If a layout refresh interrupted native scrolling, settle at the newly measured heading.
-      if (scrollTarget) {
-        const top = destination(scrollTarget);
-        scrollTarget = null;
-        if (Math.abs(scrollY-top)>2) window.scrollTo({top,behavior:"instant"});
+  async function animatePanel(panel,frames,duration) {
+    if (reduced.matches || !panel.animate) return;
+    animation = panel.animate(frames,{duration,easing:config.ease});
+    try { await animation.finished; } catch { /* A newer route owns the view. */ }
+  }
+  function route(id) {
+    closeDrawer();
+    if (id === target) return pending;
+    for (const dialogId of ["commandDialog","projectDialog"]) {
+      const dialog = el(dialogId);
+      if (dialog.open) dialog.close();
+    }
+    target = id;
+    const ticket = ++sequence;
+    animation?.cancel();
+    pending = (async () => {
+      if (current && current !== id) {
+        await animatePanel(el(current),[{opacity:1,transform:"none"},{opacity:0,transform:"translateY(-8px)"}],config.timing.exit);
+        if (ticket !== sequence) return;
       }
-      readSection();
-    }, 160);
+      show(id);
+      await animatePanel(el(id),[{opacity:0,transform:"translateY(12px)",filter:"blur(3px)"},{opacity:1,transform:"none",filter:"blur(0)"}],config.timing.enter);
+    })();
+    return pending;
   }
-  function onScroll(now) {
-    pending = false;
-    const y = Math.max(0,scrollY), delta = y - lastY;
-    const elapsed = Math.min(80,Math.max(1,now - lastTime));
-    if (scrollTarget && Math.abs(y-destination(scrollTarget))<=2) scrollTarget = null;
-    nav.classList.toggle("nav-compact", y > config.compactAfter);
-    if (delta < 0 || y <= config.compactAfter || scrollTarget || menuOpen) nav.classList.remove("nav-away");
-    else if (delta / elapsed >= config.hideSpeed && !nav.querySelector(":focus-visible")) nav.classList.add("nav-away");
-    if (Math.ceil(y + innerHeight) >= root.scrollHeight - 1) readSection();
-    lastY = y; lastTime = now;
-    scheduleScrollEnd();
+  function readLocation() {
+    const requested = location.hash.slice(1);
+    const id = links.has(requested) ? requested : "home";
+    if (requested !== id && !new URLSearchParams(requested).has("admin")) history.replaceState(history.state,"","#"+id);
+    return route(id);
   }
-  addEventListener("scroll", () => { if (!pending) { pending = true; requestAnimationFrame(onScroll); } }, {passive:true});
-  // User input can interrupt native smooth scrolling before scrollend fires.
-  for (const type of ["wheel","touchstart","pointerdown","keydown"]) {
-    document.addEventListener(type, () => { scrollTarget = null; }, {passive:true,capture:true});
+  function go(id) {
+    if (!links.has(id)) id = "home";
+    if (location.hash !== "#" + id) history.pushState(null,"","#"+id);
+    if (id === current && id === target) {
+      closeDrawer();
+      window.scrollTo({top:0,behavior:"instant"});
+      el(id).querySelector("h1").focus({preventScroll:true});
+    }
+    return route(id);
   }
-  addEventListener("popstate", () => { scrollTarget = null; });
-  mobile.addEventListener("change", layout);
-  addEventListener("resize", observeSections);
-  new ResizeObserver(positionIndicator).observe(links);
-  document.fonts.ready.then(positionIndicator);
-  layout(); observeSections(); onScroll(performance.now());
+  document.addEventListener("click",event => {
+    const link = event.target.closest('a[href^="#"]');
+    if (!link || event.defaultPrevented || event.button || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+    const id = link.hash.slice(1);
+    if (id === "main-content") { event.preventDefault(); el(current).querySelector("h1").focus(); }
+    else if (links.has(id)) { event.preventDefault(); go(id); }
+  });
+  addEventListener("hashchange",readLocation);
+  addEventListener("popstate",readLocation);
+  readLocation();
+  addEventListener("load",()=>requestAnimationFrame(()=>{
+    if (document.activeElement === document.body && !document.querySelector("dialog[open]")) el(current).querySelector("h1").focus({preventScroll:true});
+  }),{once:true});
 
   let transition;
   function applyTheme(theme) {
     root.dataset.theme = theme;
+    document.getElementById("themeLabel").textContent = theme === "dark" ? "Light" : "Dark";
     themeButton.setAttribute("aria-pressed", String(theme === "dark"));
     document.querySelector('meta[name="theme-color"]').content = config.colors[theme].bg;
     document.dispatchEvent(new Event("portfolio:theme"));
@@ -193,5 +224,5 @@ const portfolioNav = (() => {
   systemTheme.addEventListener("change", restoreTheme);
   addEventListener("storage", e => { if (!e.key || e.key === config.storageKey) restoreTheme(); });
   applyTheme(root.dataset.theme);
-  return {toggleTheme};
+  return {views,go,toggleTheme,setProfile,closeDrawer};
 })();

@@ -1,5 +1,5 @@
 import http from "node:http";
-import {readFile, writeFile, rename, mkdir} from "node:fs/promises";
+import {readdir, readFile, writeFile, rename, mkdir} from "node:fs/promises";
 import {fileURLToPath,pathToFileURL} from "node:url";
 import path from "node:path";
 import {randomBytes, createHash, timingSafeEqual} from "node:crypto";
@@ -12,8 +12,8 @@ const root = new URL("./dist/",import.meta.url);
 const stateDir = process.env.PORTFOLIO_DATA_DIR ? pathToFileURL(path.resolve(process.env.PORTFOLIO_DATA_DIR)+path.sep) : new URL("./.local/",import.meta.url);
 const stateFile = new URL("portfolio.json",stateDir);
 const limit = 12*1024*1024;
-const mime = {html:"text/html",css:"text/css",js:"text/javascript",svg:"image/svg+xml",pdf:"application/pdf",png:"image/png",jpg:"image/jpeg",webp:"image/webp",woff2:"font/woff2"};
-const staticFiles = new Set(["index.html","styles.css","portrait.css","navigation-config.js","navigation.js","navigation.css","app.js","studio.js","content.js","portrait.js","portrait-burst.js","portrait-shaders.js","vendor/three/three.module.min.js","vendor/three/LICENSE","vendor/gsap.min.js","vendor/ScrollTrigger.min.js","assets/anton/anton-latin-400-normal.woff2","assets/anton/LICENSE","assets/portrait-placeholder.svg","assets/portrait-normal-mask.png","assets/portrait-aura-mask.png","assets/portrait-photo.webp","assets/portrait-aura.webp",defaults.profile.portrait,defaults.profile.auraPortrait,...defaults.projects.map(p=>p.image),...certificateLibrary.flatMap(c=>[c.file,c.preview])]);
+const mime = {txt:"text/plain",html:"text/html",css:"text/css",js:"text/javascript",svg:"image/svg+xml",pdf:"application/pdf",png:"image/png",jpg:"image/jpeg",webp:"image/webp",woff2:"font/woff2"};
+const staticFiles = new Set(["workspace-icons.js",...(await readdir(new URL("assets/workspace/",root))).map(file=>"assets/workspace/"+file),"index.html","styles.css","portrait.css","navigation-config.js","navigation.js","navigation.css","app.js","studio.js","content.js","portrait.js","portrait-burst.js","portrait-shaders.js","vendor/three/three.module.min.js","vendor/three/LICENSE","vendor/gsap.min.js","vendor/ScrollTrigger.min.js","assets/anton/anton-latin-400-normal.woff2","assets/anton/LICENSE","assets/portrait-placeholder.svg","assets/portrait-normal-mask.png","assets/portrait-aura-mask.png","assets/portrait-photo.webp","assets/portrait-aura.webp",defaults.profile.portrait,defaults.profile.auraPortrait,...defaults.projects.map(p=>p.image),...certificateLibrary.flatMap(c=>[c.file,c.preview])]);
 const hash = value => '"'+createHash("sha256").update(JSON.stringify(value)).digest("hex")+'"';
 let content;
 try { content = validate(JSON.parse(await readFile(stateFile,"utf8"))); }

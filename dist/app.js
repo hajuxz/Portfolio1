@@ -49,11 +49,55 @@ function tags(value, className = "tag") {
   list(value).forEach(item => wrapper.append(node("span", className, item)));
   return wrapper;
 }
+const serviceSymbols = [
+  "M3 5h18v14H3z M3 9h18 M9 9v10",
+  "m7 8-4 4 4 4 m10-8 4 4-4 4 m-4-11-2 14",
+  "M4 4v16h17 M9 16v-4 m5 4V7 m5 9v-6"
+];
+function serviceIcon(index) {
+  const ring = node("span","service-card__number");
+  ring.setAttribute("aria-hidden","true");
+  const svg = document.createElementNS("http://www.w3.org/2000/svg","svg");
+  const path = document.createElementNS(svg.namespaceURI,"path");
+  svg.setAttribute("viewBox","0 0 24 24");
+  path.setAttribute("d",serviceSymbols[index % serviceSymbols.length]);
+  svg.append(path);
+  ring.append(svg);
+  return ring;
+}
 function fill(id, items) {
   byId(id).replaceChildren(...items);
 }
 function usesThemePalette(appearance) {
   return appearance.accent === defaults.appearance.accent && appearance.secondary === defaults.appearance.secondary;
+}
+function skillCard(skill,index) {
+  const categories = {"AI Tools":"ai", Frontend:"browser", Backend:"server", APIs:"api", Database:"database", "Professional & Core":"core"};
+  const brands = {figma:"figma",html:"html5",html5:"html5",css:"css3",css3:"css3",javascript:"javascript",react:"react","react.js":"react",git:"git"};
+  const icon = categories[skill.title] || "skills";
+  const card = node("article","skill-card"), header = node("header"), tile = node("span","category-tile");
+  card.style.setProperty("--order",index);
+  tile.dataset.category = icon;
+  tile.append(workspaceIcon(icon));
+  header.append(tile,node("h2","",skill.title));
+  card.append(header);
+  if (skill.description) card.append(node("p","skill-description",skill.description));
+  const chips = node("ul","skill-chips");
+  for (const label of list(skill.items)) {
+    const chip = node("li","skill-chip"), glyph = node("span","chip-glyph");
+    const brand = brands[label.toLowerCase()];
+    if (brand) {
+      const image = node("img");
+      image.alt = ""; image.width = image.height = 16;
+      image.src = "assets/workspace/" + brand + ".svg";
+      glyph.classList.add("brand-" + brand);
+      glyph.append(image);
+    } else glyph.append(workspaceIcon(icon));
+    chip.append(glyph,document.createTextNode(label));
+    chips.append(chip);
+  }
+  card.append(chips.childElementCount ? chips : node("p","skill-empty","No skills listed yet."));
+  return card;
 }
 function render(content) {
   current = content;
@@ -61,14 +105,13 @@ function render(content) {
   const words = p.name.trim().split(/\s+/);
   const initials = [words[0]?.[0], words.length > 1 ? words.at(-1)[0] : ""].join("").toUpperCase();
   for (const id of ["mobileInitials","signatureInitials"]) byId(id).textContent = initials;
-  byId("footerMark").replaceChildren(initials, node("span","",".")); 
   const surname = words.at(-1);
   const nameLines = [words.slice(0,-1).join(" "), surname].filter(Boolean);
   byId("heroName").replaceChildren(...nameLines.map(line => node("span","",line)));
   byId("heroName").setAttribute("aria-label", p.name);
-  document.title = (p.name || "My portfolio") + " — Portfolio";
+  portfolioNav.setProfile(p, content.contact);
   document.querySelector('meta[name="description"]').content = p.headline;
-  const values = {heroAvailability:p.availability, heroEducation:p.eyebrow, heroFocus:p.roles, heroLocation:p.location, aboutTitle:p.aboutTitle, aboutIntro:p.aboutIntro, aboutBio:p.bio, contactIntro:content.contact.intro, footerNote:p.footer, footerName:p.name, footerYear:new Date().getFullYear()};
+  const values = {heroAvailability:p.availability, heroEducation:p.eyebrow, heroFocus:p.roles, heroLocation:p.location, aboutTitle:p.aboutTitle, aboutIntro:p.aboutIntro, aboutBio:p.bio, contactIntro:content.contact.intro};
   Object.entries(values).forEach(([id,value]) => byId(id).textContent = value);
   portraitSwitch.setSources(p);
   const resume = byId("resumeLink");
@@ -87,23 +130,16 @@ function render(content) {
   fill("servicesGrid",content.services.map((s,index) => {
     const card = node("article","service-card"), body = node("div");
     body.append(node("h3","",s.title),node("p","",s.description));
-    card.append(node("span","service-card__number",["✳","</>","▥"][index % 3]),body);
+    card.append(serviceIcon(index),body);
     return card;
   }));
-  byId("interests").hidden = !content.interests.length;
   fill("interestsGrid",content.interests.map(interest=>{
     const card = node("article");
     card.append(node("h4","",interest.title),node("p","",interest.description));
     return card;
   }));
   renderProjects();
-  fill("skillsGrid",content.skills.map((s,index) => {
-    const card = node("article","capability-card"), top = node("div","capability-card__top"), heading = node("div");
-    heading.append(node("h3","",s.title),node("p","",s.description));
-    top.append(heading,node("span","capability-card__icon",["✳","{ }","▥"][index % 3]));
-    card.append(top,tags(s.items,"skill-pill"));
-    return card;
-  }));
+  fill("skillsGrid", content.skills.map(skillCard));
   fill("timelineList",content.journey.map(j => {
     const card = node("article","timeline-item"), body = node("div");
     body.append(node("h3","",j.title),node("h4","",j.organization),node("p","",j.description));
@@ -153,7 +189,7 @@ function renderProjects() {
   const projects = current.projects.filter(p => !filter || filter === p.category);
   byId("projectCount").textContent = projects.length + (projects.length === 1 ? " project" : " projects");
   const gallery = byId("projectsList");
-  gallery.querySelectorAll(".reveal").forEach(card=>revealObserver.unobserve(card));
+
   fill("projectsList",projects.length ? projects.map((p,index) => {
     const article = node("article","project-card reveal"), media = node("div","project-card__media"), body = node("div","project-card__body");
     article.style.setProperty("--card-delay",(index % 2)*75+"ms");
@@ -170,7 +206,7 @@ function renderProjects() {
     return article;
   }) : [node("p","empty-state","New projects will appear here.")]);
   gallery.scrollLeft = 0;
-  gallery.querySelectorAll(".reveal").forEach(card=>revealObserver.observe(card));
+
   updateGalleryControls();
 }
 function updateGalleryControls() {
@@ -207,36 +243,86 @@ function openProject(p) {
 }
 document.addEventListener("portfolio:theme",updateGalleryControls);
 const commands = [
-  ...NAV_CONFIG.sections.map(({id,label})=>({label,icon:"↗",action:()=>{ location.hash = id; byId(id).scrollIntoView(); }})),
-  {label:"Certificates of completion",icon:"↗",action:()=>{location.hash = "certificates"; byId("certificates").scrollIntoView();}},
-  {label:"Switch light / dark theme",icon:"◐",action:portfolioNav.toggleTheme}
+  ...portfolioNav.views.map(view => ({label:view.label,icon:view.icon,action:()=>portfolioNav.go(view.id)})),
+  {label:"Toggle dark mode",icon:"moon",action:portfolioNav.toggleTheme},
+  {label:"Switch portrait",icon:"swap",action:async()=>{
+    portraitSwitch.cancelIntro();
+    await portfolioNav.go("home");
+    if (!byId("home").hidden) await portraitSwitch.switchManually();
+  }}
 ];
+const commandDialog = byId("commandDialog"), commandInput = byId("commandInput");
+let matches = [], selected = 0;
+function fuzzyScore(label,query) {
+  const value = label.toLowerCase();
+  const prefix = value.indexOf(query);
+  if (prefix >= 0) return prefix;
+  let last = -1, distance = 0;
+  for (const char of query) {
+    const index = value.indexOf(char,last + 1);
+    if (index < 0) return Infinity;
+    distance += index - last;
+    last = index;
+  }
+  return 100 + distance;
+}
+function selectCommand(index,scroll = true) {
+  if (!matches.length) { commandInput.removeAttribute("aria-activedescendant"); return; }
+  selected = (index + matches.length) % matches.length;
+  [...byId("commandResults").children].forEach((item,i) => item.setAttribute("aria-selected",i === selected));
+  const option = byId("command-option-"+selected);
+  commandInput.setAttribute("aria-activedescendant",option.id);
+  if (scroll) option.scrollIntoView({block:"nearest",behavior:"instant"});
+}
+function runCommand(index) {
+  const command = matches[index];
+  if (!command) return;
+  commandDialog.close();
+  command.action();
+}
 function renderCommands() {
-  const query = byId("commandInput").value.toLowerCase().trim();
-  const items = commands.filter(c=>c.label.toLowerCase().includes(query)).map(c=>{
-    const item = button("command-item","",()=>{ byId("commandDialog").close(); c.action(); });
-    item.append(node("span","",c.icon),node("strong","",c.label));
+  const query = commandInput.value.trim().toLowerCase();
+  matches = commands.map(command => ({command,score:fuzzyScore(command.label,query)}))
+    .filter(hit => Number.isFinite(hit.score)).sort((a,b)=>a.score-b.score).map(hit=>hit.command);
+  const items = matches.map((command,index) => {
+    const item = node("div","command-item");
+    item.id = "command-option-"+index;
+    item.setAttribute("role","option");
+    item.append(workspaceIcon(command.icon),node("strong","",command.label));
+    item.onpointermove = () => selectCommand(index,false);
+    item.onmousedown = e => e.preventDefault();
+    item.onclick = () => runCommand(index);
     return item;
   });
-  fill("commandResults",items.length ? items : [node("p","command-empty","No matches")]);
+  fill("commandResults",items.length ? items : [node("p","command-empty","No matching views or actions.")]);
+  selectCommand(0,false);
 }
 function quickJump() {
   if (document.querySelector("dialog[open]")) return;
-  byId("commandInput").value = "";
+  portfolioNav.closeDrawer(true);
+  commandInput.value = "";
   renderCommands();
-  byId("commandDialog").showModal();
-  byId("commandInput").focus();
+  commandDialog.showModal();
+  commandInput.focus();
 }
-byId("commandInput").oninput = renderCommands;
-byId("commandDialog").onkeydown = event => {
-  const items = [...byId("commandResults").querySelectorAll("button")], index = items.indexOf(document.activeElement);
-  if (!items.length) return;
-  if (["ArrowDown","ArrowUp"].includes(event.key)) {
+commandInput.oninput = renderCommands;
+commandDialog.onkeydown = event => {
+  if (event.isComposing) return;
+  if (event.key === "ArrowDown" || event.key === "ArrowUp") {
     event.preventDefault();
-    items[(index + (event.key === "ArrowDown" ? 1 : index < 0 ? 0 : -1) + items.length) % items.length].focus();
-  } else if (event.key === "Enter" && document.activeElement === byId("commandInput")) items[0].click();
+    selectCommand(selected + (event.key === "ArrowDown" ? 1 : -1));
+  } else if (event.key === "Enter") {
+    event.preventDefault();
+    runCommand(selected);
+  }
 };
-document.addEventListener("keydown",e=>{ if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {e.preventDefault(); quickJump();} });
+document.addEventListener("keydown",event => {
+  if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
+    event.preventDefault();
+    if (commandDialog.open) commandDialog.close();
+    else quickJump();
+  }
+});
 byId("commandButton").onclick = quickJump;
 document.querySelector("[data-close-project]").onclick = ()=>byId("projectDialog").close();
 for (const id of ["projectDialog","commandDialog"]) byId(id).onclick = e=>{ if (e.target === byId(id)) byId(id).close(); };
@@ -250,29 +336,8 @@ byId("contactForm").onsubmit = e=>{
   const form = new FormData(e.target), body = form.get("message")+"\n\n"+form.get("name")+"\n"+form.get("email");
   location.href = "mailto:"+encodeURIComponent(current.contact.email)+"?subject="+encodeURIComponent(form.get("subject"))+"&body="+encodeURIComponent(body);
 };
-function updateScrollProgress() {
-  document.body.classList.toggle("at-hero", byId("home").getBoundingClientRect().bottom > 70);
-  const timeline = document.querySelector(".timeline-shell").getBoundingClientRect();
-  document.documentElement.style.setProperty("--timeline-progress", Math.min(100,Math.max(0,(innerHeight*.7-timeline.top)/timeline.height*100))+"%");
-}
-let frame = false;
-addEventListener("scroll",()=>{ if (!frame) { frame = true; requestAnimationFrame(()=>{ updateScrollProgress(); frame = false; }); } },{passive:true});
-const revealObserver = new IntersectionObserver(entries=>entries.forEach(e=>{
-  if (e.isIntersecting) {e.target.classList.add("is-visible"); revealObserver.unobserve(e.target);}
-}),{threshold:0.03});
-all(".reveal").forEach(el=>revealObserver.observe(el));
 function updateClock() {
   byId("localTime").textContent = new Intl.DateTimeFormat("en-PH",{hour:"numeric",minute:"2-digit", timeZone:"Asia/Manila"}).format(new Date())+" PHT";
 }
 updateClock(); setInterval(updateClock,30000);
-updateScrollProgress();
 
-if (window.gsap && window.ScrollTrigger) {
-  gsap.registerPlugin(ScrollTrigger);
-  gsap.matchMedia().add("(prefers-reduced-motion: no-preference)", () => {
-    gsap.to(".intro-shade", {
-      opacity: 1, ease: "none",
-      scrollTrigger: {trigger: "#home", start: "top top", end: "bottom top", scrub: true}
-    });
-  });
-}

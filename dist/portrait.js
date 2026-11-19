@@ -32,7 +32,8 @@ const portraitSwitch = (() => {
   let active="normal", description=frame.getAttribute("aria-label"), turns=0, ready=false, destroyed=false;
   let sourceVersion=0, swapVersion=0, gpuVersion=0, engine=null, preparing=null, gpuFailed=false;
   let inView=false, autoDue=false, autoUsed=false, autoTimer, autoScheduled=false;
-  const visible = () => inView && !document.hidden;
+  let heroVisible = true;
+  const visible = () => heroVisible && inView && !document.hidden;
   const lens = createAuraLens(frame, layers, CONFIG, events.signal);
   const duration = CONFIG.durations;
   frame.style.setProperty("--portrait-fade",duration.fallback+"s");
@@ -156,7 +157,7 @@ const portraitSwitch = (() => {
   document.addEventListener("portfolio:theme",()=>engine?.resize(),options);
   toggle.addEventListener("click",()=>{autoUsed=true;swap();},options);
   document.addEventListener("keydown",event=>{
-    if (event.key.toLowerCase()!=="d" || event.repeat || event.isComposing || event.ctrlKey || event.metaKey || event.altKey) return;
+    if (!heroVisible || document.body.classList.contains("drawer-open") || event.key.toLowerCase()!=="d" || event.repeat || event.isComposing || event.ctrlKey || event.metaKey || event.altKey) return;
     if (event.target.isContentEditable || event.target.closest?.("input,textarea,select") || document.querySelector("dialog[open]")) return;
     autoUsed=true;frame.classList.toggle("is-debug");settle();
   },options);
@@ -203,7 +204,17 @@ const portraitSwitch = (() => {
   const unmount=new MutationObserver(()=>{if (!frame.isConnected || !toggle.isConnected) destroy();});
   unmount.observe(document.body,{childList:true,subtree:true});
   window.addEventListener("pagehide",e=>{if (!e.persisted) destroy();},options);
-  return {align,setSources,startAuto,destroy};
+  function setHeroVisible(value) {
+    if (destroyed || value === heroVisible) return;
+    heroVisible = value;
+    onVisibility();
+  }
+  async function switchManually() {
+    autoUsed = true;
+    await Promise.all(Object.values(images).map(img => img.decode())).catch(() => {});
+    if (heroVisible) await swap();
+  }
+  return {align,setSources,startAuto,destroy,setHeroVisible,switchManually, cancelIntro:()=>{autoUsed=true;}};
 })();
 
 // The aperture moves in frame coordinates. Its contents receive the inverse

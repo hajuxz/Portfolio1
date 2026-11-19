@@ -124,12 +124,12 @@ try {
   await clickPortrait();
   await until(()=>evaluate('window.sampledBurst?.duration()===.7 && sampledBurst.paused()'));
   await checkTexture("auraPortrait",-.01375,-.06375);
-  await evaluate('scrollTo({top:document.getElementById("home").offsetHeight+100,behavior:"instant"})');
+  await evaluate('portfolioNav.go("work")');
   await delay(250);
   const offscreenDraws=await evaluate('shardDraws.length');
   await delay(200);
   assert.equal(await evaluate('shardDraws.length'),offscreenDraws);
-  await evaluate('scrollTo({top:0,behavior:"instant"})');
+  await evaluate('portfolioNav.go("home")');
   await until(settled);
   assert.equal(await label(),"Show Aura");
   await pressD();
@@ -138,10 +138,7 @@ try {
   assert.equal(await label(),"Show Aura");
   await pressD();
   assert.ok(await evaluate('getComputedStyle(document.querySelector("[data-portrait=aura]")).opacity==="0"'));
-  await evaluate('scrollTo({top:document.getElementById("home").offsetHeight / 2,behavior:"instant"})');
-  await until(()=>evaluate('Number(getComputedStyle(document.querySelector(".intro-shade")).opacity) > .4 && Number(getComputedStyle(document.querySelector(".intro-shade")).opacity) < .6'));
-  await evaluate(`document.querySelector('[data-section-link="about"]').click()`);
-  await until(()=>evaluate('document.getElementById("about").getBoundingClientRect().top < 120'));
+  await evaluate('portfolioNav.go("about")');
   await evaluate('document.getElementById("portraitFrame").remove()');
   await until(()=>evaluate('document.getElementById("portraitToggle").hidden && Object.values(releasedGPU).every(count=>count>0)'));
   console.log("Desktop WebGL bursts in both directions, instanced draws, offscreen pause, lock and debug overlay passed.");
@@ -202,61 +199,93 @@ try {
   await delay(150);
   assert.equal(await evaluate('document.querySelector(".aura-lens").getAttribute("style")'),idleStyle);
   console.log("Lens proximity, registration in both directions, outer pixels, debug, exit and idle state passed.");
-  const currentSection = () => evaluate('document.querySelector("#primaryNav [aria-current=page]")?.dataset.sectionLink');
-  const navBounds = await evaluate(`(()=>{
-    const nav=document.querySelector('nav[aria-label="Primary"]'), b=nav.getBoundingClientRect();
-    return {top:b.top,height:b.height,offset:b.left+b.width/2-document.documentElement.clientWidth/2,ids:[...nav.querySelectorAll("[data-section-link]")].map(a=>a.dataset.sectionLink)};
-  })()`);
-  assert.deepEqual(navBounds.ids,["home","about","work","skills","journey","contact"]);
-  assert.ok(navBounds.top===16 && Math.abs(navBounds.offset)<1 && navBounds.height===48,JSON.stringify(navBounds));
-  const workLink = await evaluate('(()=>{const r=document.querySelector("[data-section-link=work]").getBoundingClientRect();return [r.x+r.width/2,r.y+r.height/2]})()');
-  await move(...workLink);
-  const tracks = id => evaluate(`(()=>{const p=document.querySelector(".nav-indicator").getBoundingClientRect(),a=document.querySelector('[data-section-link="${id}"]').getBoundingClientRect();return Math.abs(p.left-a.left)<.5 && Math.abs(p.width-a.width)<.5})()`);
-  await until(()=>tracks("work")); await move(5,100); await until(()=>tracks("home"));
-  await evaluate('scrollBy({top:340,behavior:"instant"})');
-  await until(()=>evaluate('primaryNav.classList.contains("nav-away") && primaryNav.classList.contains("nav-compact")'));
-  await evaluate('scrollBy({top:-30,behavior:"instant"})');
-  await until(()=>evaluate('!primaryNav.classList.contains("nav-away")'));
-  await evaluate('document.querySelector("[data-section-link=skills]").click()');
-  await until(async()=>await currentSection()==="skills" && await evaluate('Math.abs(document.getElementById("skills").getBoundingClientRect().top-80)<2'));
-  await evaluate('document.dispatchEvent(new WheelEvent("wheel",{bubbles:true})); document.getElementById("journey").scrollIntoView({behavior:"instant"})');
-  await until(async()=>await currentSection()==="journey");
-  await cmd("Emulation.setDeviceMetricsOverride",{width:390,height:844,deviceScaleFactor:1,mobile:false});
-  const openMenu = () => evaluate('document.querySelector(".nav-menu-toggle").click()');
-  const closed = () => evaluate('document.getElementById("navMenu").inert && !document.documentElement.classList.contains("nav-locked")');
-  await openMenu();
-  assert.ok(await evaluate('document.documentElement.classList.contains("nav-locked") && document.querySelector(".nav-menu-toggle").getAttribute("aria-expanded")==="true"'));
-  await cmd("Input.dispatchKeyEvent",{type:"keyDown",key:"Escape",code:"Escape",windowsVirtualKeyCode:27});
-  assert.ok(await closed());
-  assert.ok(await evaluate('document.activeElement.matches(".nav-menu-toggle")'));
-  await openMenu(); await evaluate('document.body.dispatchEvent(new PointerEvent("pointerdown",{bubbles:true}))'); assert.ok(await closed());
-  await openMenu();
-  await until(()=>evaluate('getComputedStyle(document.querySelector(".nav-cta")).opacity==="1"'));
-  assert.ok(await evaluate('[...primaryNav.querySelectorAll("a,button")].every(el=>el.getBoundingClientRect().height>=44 && el.getBoundingClientRect().width>=44)'));
-  await evaluate('document.querySelector("[data-section-link=contact]").click()');
-  assert.ok(await closed());
-  try { await until(async()=>await currentSection()==="contact",4000); }
-  catch { assert.fail(await evaluate(`JSON.stringify({hash:location.hash,y:scrollY,closest:document.querySelector('[aria-current=page]')?.dataset.sectionLink,
-    rootHeight:document.documentElement.scrollHeight,target:document.getElementById("contact").getBoundingClientRect().top,
-    focus:document.activeElement.id,menu:document.getElementById("navMenu").inert})`)); }
-  await cmd("Emulation.setEmulatedMedia",{features:[{name:"prefers-color-scheme",value:"dark"}]});
-  await cmd("Page.navigate",{url:origin+"/?nav-theme"});
-  await until(()=>evaluate('document.body.classList.contains("ready") && themeToggle.getAttribute("aria-pressed")==="true"'));
-  assert.ok(await evaluate('getComputedStyle(document.getElementById("home")).backgroundColor==="rgb(16, 18, 23)" && getComputedStyle(profilePortrait).maskImage.includes("normal-mask")'));
-  await evaluate('themeToggle.click()');
-  await until(()=>evaluate('document.getAnimations().some(a=>a.effect?.getKeyframes().some(k=>k.clipPath?.startsWith("circle(")))'));
-  await until(()=>evaluate('document.documentElement.dataset.theme==="light" && localStorage.getItem("orbitfolio.theme")==="light" && !document.documentElement.classList.contains("theme-wipe")'));
+  const active = () => evaluate('document.body.dataset.view');
+  async function clickVisible(selector) {
+    const position = await until(()=>evaluate(`(async()=>{
+      const el=document.querySelector(${JSON.stringify(selector)}), r=el.getBoundingClientRect();
+      await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
+      const after=el.getBoundingClientRect();
+      if(Math.abs(r.left-after.left)>.3 || Math.abs(r.top-after.top)>.3) return null;
+      const x=after.left+after.width/2, y=after.top+after.height/2;
+      return r.width && el.contains(document.elementFromPoint(x,y)) ? {x,y} : null;
+    })()`));
+    await cmd("Input.dispatchMouseEvent",{type:"mouseMoved",...position});
+    await cmd("Input.dispatchMouseEvent",{type:"mousePressed",button:"left",clickCount:1,...position});
+    await cmd("Input.dispatchMouseEvent",{type:"mouseReleased",button:"left",clickCount:1,...position});
+  }
+  const keypress = async (key,modifiers=0)=> {
+    const code={Escape:27,Tab:9,ArrowDown:40,ArrowUp:38,Enter:13,k:75}[key];
+    for (const type of ["keyDown","keyUp"]) await cmd("Input.dispatchKeyEvent",{type,key,modifiers,windowsVirtualKeyCode:code});
+  };
+  await cmd("Page.navigate",{url:origin+"/#skills"});
+  await until(()=>evaluate('document.body.classList.contains("ready") && document.body.dataset.view==="skills"'));
+  assert.equal(await evaluate('workspaceSidebar.inert'),false);
+  assert.equal(await evaluate('skillsGrid.children.length'),6);
+  assert.ok(await evaluate('[...skillsGrid.querySelectorAll("img")].every(i=>i.complete && i.naturalWidth)'));
+  await clickVisible("#closeSidebar");
+  await until(()=>evaluate('workspaceSidebar.inert && !menuTrigger.hidden'));
   await cmd("Page.reload");
-  await until(()=>evaluate('document.body.classList.contains("ready") && themeToggle.getAttribute("aria-pressed")==="false"'));
-  assert.ok(await evaluate(`(()=>{
-    Object.defineProperty(document,"startViewTransition",{configurable:true,value:undefined});
-    themeToggle.click();
-    const instant=document.documentElement.dataset.theme==="dark" && !document.documentElement.classList.contains("theme-wipe");
-    themeToggle.click(); delete document.startViewTransition;
-    return instant && document.documentElement.dataset.theme==="light";
-  })()`));
+  await until(()=>evaluate('document.body.classList.contains("ready") && !menuTrigger.hidden'));
+  await keypress("k",2);
+  await until(()=>evaluate('commandDialog.open'));
+  await cmd("Input.insertText",{text:"jrny"});
+  assert.equal(await evaluate('commandResults.textContent'),"Journey");
+  await keypress("Enter");
+  await until(async()=>await active()==="journey" && await evaluate('!workspaceSidebar.inert'));
+  await evaluate("history.back()");
+  await until(async()=>await active()==="skills" && await evaluate('workspaceSidebar.inert'));
+  await evaluate("history.forward()");
+  await until(async()=>await active()==="journey");
+  await evaluate('location.hash="not-a-view"');
+  await until(()=>evaluate('document.body.dataset.view==="home" && location.hash==="#home" && workspaceSidebar.inert'));
+  for (const width of [1440,390]) {
+    await cmd("Emulation.setDeviceMetricsOverride",{width,height:850,deviceScaleFactor:1,mobile:false});
+    for (const theme of ["light","dark"]) {
+      if (await evaluate('document.documentElement.dataset.theme') !== theme) await clickVisible("#themeToggle");
+      await until(()=>evaluate(`document.documentElement.dataset.theme===${JSON.stringify(theme)} && !document.documentElement.classList.contains("theme-wipe")`));
+      for (const view of ["about","work","skills","journey","contact","home"]) {
+        if (await evaluate('workspaceSidebar.inert')) await clickVisible("#menuTrigger");
+        await clickVisible('[data-route="'+view+'"]');
+        await until(()=>evaluate(`document.body.dataset.view==="${view}" && document.activeElement===document.querySelector("#${view} h1")`));
+        const state = await evaluate(`({visible:[...document.querySelectorAll("main > [data-view]")].filter(s=>s.getClientRects().length).map(s=>s.id),hash:location.hash,title:document.title,active:primaryNav.querySelector("[aria-current]").dataset.route,y:scrollY,overflow:document.documentElement.scrollWidth-innerWidth})`);
+        assert.deepEqual(state.visible,[view]); assert.equal(state.hash,"#"+view); assert.equal(state.active,view);
+        assert.ok(state.title.endsWith(view[0].toUpperCase()+view.slice(1)) && state.y===0 && state.overflow<=1,JSON.stringify(state));
+      }
+      console.log("All six workspace views, focus and theme passed at",width,theme);
+    }
+  }
+  await clickVisible("#menuTrigger");
+  assert.ok(await evaluate('document.body.classList.contains("drawer-open") && document.querySelector("main").inert'));
+  await evaluate('document.querySelector(".identity-mark").focus()');
+  await keypress("Tab",8);
+  assert.ok(await evaluate('document.activeElement===primaryNav.lastElementChild'));
+  await keypress("Escape");
+  assert.ok(await evaluate('workspaceSidebar.inert && document.activeElement===menuTrigger'));
+  await clickVisible("#menuTrigger"); await clickVisible("#commandButton");
+  assert.ok(await evaluate('commandDialog.open && !document.body.classList.contains("drawer-open")'));
+  await keypress("ArrowDown"); await keypress("Enter");
+  await until(async()=>await active()==="about");
+  await keypress("k",2); await cmd("Input.insertText",{text:"swpr"});
+  await keypress("Enter");
+  await until(async()=>await active()==="home" && await settled());
+  await clickVisible("#menuTrigger");
+  const backdropPoint = {x:385,y:450};
+  await cmd("Input.dispatchMouseEvent",{type:"mousePressed",...backdropPoint,button:"left",clickCount:1});
+  await cmd("Input.dispatchMouseEvent",{type:"mouseReleased",...backdropPoint,button:"left",clickCount:1});
+  await until(()=>evaluate('workspaceSidebar.inert && !document.body.classList.contains("drawer-open")'));
+  await evaluate('localStorage.removeItem(NAV_CONFIG.storageKey)');
+  await cmd("Emulation.setEmulatedMedia",{features:[{name:"prefers-color-scheme",value:"dark"}]});
+  await cmd("Page.navigate",{url:origin+"/?theme#skills"});
+  await until(()=>evaluate('document.body.classList.contains("ready") && themeLabel.textContent==="Light" && themeToggle.getAttribute("aria-pressed")==="true"'));
+  await keypress("k",2); await cmd("Input.insertText",{text:"tgldrk"}); await keypress("Enter");
+  await until(()=>evaluate('document.getAnimations().some(a=>a.effect?.getKeyframes().some(k=>k.clipPath?.startsWith("circle(")))'));
+  await until(()=>evaluate('themeLabel.textContent==="Dark" && localStorage.getItem(NAV_CONFIG.storageKey)==="light" && !document.documentElement.classList.contains("theme-wipe")'));
+  await cmd("Emulation.setEmulatedMedia",{features:[{name:"prefers-reduced-motion",value:"reduce"}]});
+  await evaluate('portfolioNav.go("journey")');
+  assert.ok(await evaluate('document.activeElement===journeyTitle && !journey.hidden && !journey.getAnimations().length'));
   await cmd("Emulation.setEmulatedMedia",{features:[]});
-  console.log("Nav dimensions, indicator, anchors, scroll spy, hide/show, mobile dismissal, system and saved theme passed.");
+  await evaluate('localStorage.removeItem(NAV_CONFIG.sidebarKey)');
+  await evaluate('localStorage.setItem("orbitfolio.theme","light")');
   await cmd("Page.navigate",{url:origin+"/?editor#admin="+owner});
   await until(()=>evaluate('document.querySelector("#studioDialog")?.open'));
   for (const width of [320,390,768,1024,1536]) {
@@ -304,6 +333,7 @@ try {
   assert.equal(await evaluate('document.querySelector(".certificate-issuer").textContent'),"Certificate QA");
   assert.equal((await (await fetch(origin+"/api/portfolio")).json()).content.profile.name,"Portfolio QA");
   assert.equal(JSON.parse(await readFile(path.join(temp,"portfolio.json"),"utf8")).profile.name,"Portfolio QA");
+  await evaluate('portfolioNav.go("work")');
   await evaluate('document.querySelectorAll(".filter-button")[1].click(); document.querySelector(".project-open").click()');
   assert.equal(await evaluate('document.getElementById("projectDialog").open && document.querySelectorAll(".project-card").length === 1'),true);
   await evaluate('document.getElementById("projectDialog").close(); document.getElementById("commandButton").click()');
@@ -318,7 +348,7 @@ try {
   await evaluate('document.getElementById("themeToggle").click()');
   await until(()=>evaluate('document.querySelector(".gallery-controls").hidden && !document.documentElement.classList.contains("theme-wipe")'));
   await cmd("Emulation.setEmulatedMedia",{features:[{name:"prefers-reduced-motion",value:"reduce"}]});
-  await cmd("Page.reload");
+  await cmd("Page.navigate",{url:origin+"/#home"});
   await until(()=>evaluate('document.body.classList.contains("ready") && !document.getElementById("portraitToggle").hidden'));
   await clickPortrait();
   const midFade = () => evaluate('(()=>{const a=getComputedStyle(document.querySelector("[data-portrait=aura]")); return +a.opacity>0 && +a.opacity<1 && a.transform==="none" && a.filter==="none" && a.transitionDuration==="0.3s"})()');

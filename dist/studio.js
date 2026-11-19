@@ -249,7 +249,7 @@ async function startPortfolio() {
   const fragment = new URLSearchParams(location.hash.slice(1));
   if (fragment.has("admin")) {
     adminToken = fragment.get("admin");
-    history.replaceState(null,"",location.pathname+location.search);
+    history.replaceState(null,"",location.pathname+location.search+"#home");
     try { sessionStorage.setItem("orbitfolio.owner",adminToken); } catch {}
   } else {
     try { adminToken = sessionStorage.getItem("orbitfolio.owner") || ""; } catch {}
@@ -283,7 +283,7 @@ async function startPortfolio() {
     all("[data-open-editor]").forEach(b=>b.hidden = true);
     document.body.classList.add("visitor");
   } else {
-    commands.push({label:"Edit portfolio",icon:"✎",action:openEditor});
+    commands.push({label:"Edit portfolio",icon:"edit",action:openEditor});
     if (serverMode) {
       editor.querySelector(".studio-header .kicker").textContent = "Owner editor";
       editor.querySelector(".studio-header p:last-child").textContent = "Publish changes to update the portfolio for every visitor.";
