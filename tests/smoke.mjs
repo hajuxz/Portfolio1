@@ -199,6 +199,40 @@ try {
   await delay(150);
   assert.equal(await evaluate('document.querySelector(".aura-lens").getAttribute("style")'),idleStyle);
   console.log("Lens proximity, registration in both directions, outer pixels, debug, exit and idle state passed.");
+  // Record the original JPEG index actually painted, including reverse scrubs.
+  await cmd("Page.addScriptToEvaluateOnNewDocument",{source:`
+    window.sequenceDraws = [];
+    const paint = CanvasRenderingContext2D.prototype.drawImage;
+    CanvasRenderingContext2D.prototype.drawImage = function(image,...args) {
+      if (this.canvas.id === "sunglassesSequence") {
+        window.sequenceDraws.push(window.sunglassesFrames.indexOf(image.src.split(",")[1]));
+      }
+      return paint.call(this,image,...args);
+    };
+  `});
+  await cmd("Page.navigate",{url:origin+"/?scroll-frames#home"});
+  for (const width of [1280,390]) {
+    await cmd("Emulation.setDeviceMetricsOverride",{width,height:800,deviceScaleFactor:1,mobile:false});
+    await until(()=>evaluate('document.body.classList.contains("ready") && window.sunglassesFrames?.length === 161'));
+    for (const fraction of [0,.5,1,.25,0]) {
+      const previous = await evaluate('({index:sequenceDraws.at(-1),count:sequenceDraws.length})');
+      await evaluate(`(()=>{const start=scrollY+home.getBoundingClientRect().bottom; const end=document.documentElement.scrollHeight-innerHeight; scrollTo({top:start+(end-start)*${fraction},behavior:"instant"})})()`);
+      await until(()=>evaluate(`sequenceDraws.at(-1) === ${Math.round(fraction*160)} && Math.abs(sunglassesSequence.getBoundingClientRect().top)<2`));
+      if (previous.index != null) {
+        const direction = Math.sign(Math.round(fraction*160) - previous.index);
+        const drawn = await evaluate('sequenceDraws.slice('+previous.count+')');
+        assert.ok(drawn.every((n,i)=>direction*(n-(i ? drawn[i-1] : previous.index))>=0),"Scroll scrub must preserve frame order");
+      }
+    }
+    const draws=await evaluate('sequenceDraws.length');
+    await delay(160);
+    assert.equal(await evaluate('sequenceDraws.length'),draws);
+    console.log("Forward, reverse, endpoints and idle frame verified at",width);
+  }
+  await cmd("Emulation.setEmulatedMedia",{features:[{name:"prefers-reduced-motion",value:"reduce"}]});
+  await until(()=>evaluate('getComputedStyle(sunglassesSequence).backgroundImage.includes("last.jpg") && getComputedStyle(sunglassesSequence).position==="static" && getComputedStyle(document.querySelector("main"),"::after").display==="none" && sunglassesSequence.getContext("2d").getImageData(20,20,1,1).data[3]===0'));
+  await cmd("Emulation.setEmulatedMedia",{features:[]});
+  await cmd("Emulation.setDeviceMetricsOverride",{width:1280,height:800,deviceScaleFactor:1,mobile:false});
   const active = () => evaluate('document.body.dataset.view');
   async function clickVisible(selector) {
     const position = await until(()=>evaluate(`(async()=>{
