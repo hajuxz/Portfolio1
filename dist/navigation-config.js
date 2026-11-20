@@ -3,7 +3,6 @@
 const NAV_CONFIG = {
   views: [
     {id: "home", label: "Home", icon: "home", group: "Workspace", collapsed: true},
-    {id: "about", label: "About", icon: "user", group: "Workspace"},
     {id: "work", label: "Work", icon: "layers", group: "Workspace"},
     {id: "skills", label: "Skills", icon: "skills", group: "Workspace"},
     {id: "journey", label: "Journey", icon: "route", group: "Workspace"},

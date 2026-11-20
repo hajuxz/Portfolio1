@@ -49,22 +49,6 @@ function tags(value, className = "tag") {
   list(value).forEach(item => wrapper.append(node("span", className, item)));
   return wrapper;
 }
-const serviceSymbols = [
-  "M3 5h18v14H3z M3 9h18 M9 9v10",
-  "m7 8-4 4 4 4 m10-8 4 4-4 4 m-4-11-2 14",
-  "M4 4v16h17 M9 16v-4 m5 4V7 m5 9v-6"
-];
-function serviceIcon(index) {
-  const ring = node("span","service-card__number");
-  ring.setAttribute("aria-hidden","true");
-  const svg = document.createElementNS("http://www.w3.org/2000/svg","svg");
-  const path = document.createElementNS(svg.namespaceURI,"path");
-  svg.setAttribute("viewBox","0 0 24 24");
-  path.setAttribute("d",serviceSymbols[index % serviceSymbols.length]);
-  svg.append(path);
-  ring.append(svg);
-  return ring;
-}
 function fill(id, items) {
   byId(id).replaceChildren(...items);
 }
@@ -166,12 +150,18 @@ function render(content) {
   const p = content.profile;
   const words = p.name.trim().split(/\s+/);
   const initials = [words[0]?.[0], words.length > 1 ? words.at(-1)[0] : ""].join("").toUpperCase();
-  for (const id of ["mobileInitials","signatureInitials"]) byId(id).textContent = initials;
+  for (const id of ["mobileInitials"]) {
+    const el = byId(id);
+    if (el) el.textContent = initials;
+  }
   heroMedia.setProfile(p);
   portfolioNav.setProfile(p, content.contact);
   document.querySelector('meta[name="description"]').content = p.headline;
-  const values = {heroEducation:p.eyebrow, heroLocation:p.location, heroFocus:p.roles, heroAvailability:p.availability, aboutTitle:p.aboutTitle, aboutIntro:p.aboutIntro, aboutBio:p.bio, contactIntro:content.contact.intro};
-  Object.entries(values).forEach(([id,value]) => byId(id).textContent = value);
+  const values = {heroEducation:p.eyebrow, heroLocation:p.location, heroFocus:p.roles, heroAvailability:p.availability, contactIntro:content.contact.intro};
+  Object.entries(values).forEach(([id,value]) => {
+    const el = byId(id);
+    if (el) el.textContent = value;
+  });
   for (const [field, variable] of [["accent","--accent"],["secondary","--accent-2"]]) {
     const color = content.appearance[field];
     if (!usesThemePalette(content.appearance) && /^#[a-f\d]{6}$/i.test(color)) {
@@ -182,12 +172,6 @@ function render(content) {
       document.documentElement.style.removeProperty(variable + "-rgb");
     }
   }
-  fill("servicesGrid",content.services.map((s,index) => {
-    const card = node("article","service-card"), body = node("div");
-    body.append(node("h3","",s.title),node("p","",s.description));
-    card.append(serviceIcon(index),body);
-    return card;
-  }));
   fill("interestsGrid",content.interests.map(interest=>{
     const card = node("article");
     card.append(node("h4","",interest.title),node("p","",interest.description));

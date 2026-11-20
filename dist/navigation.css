@@ -84,7 +84,7 @@ main > .section[data-view] {
   flex-shrink: 0;
   stroke: var(--focus);
 }
-.skill-card, .about .service-card, .section .project-card, #interestsGrid article, .certificate-card, .contact-copy, .section .contact-form {
+.skill-card, .section .project-card, #interestsGrid article, .certificate-card, .contact-copy, .section .contact-form {
   border: 1px solid var(--nav-border); border-radius: 18px; background: var(--card-bg); box-shadow: 0 2px 6px var(--card-shadow);
 }
 .skill-card { min-width: 0; min-height: 145px; padding: 24px; display: flex; flex-direction: column; transition: filter 250ms,opacity 250ms,transform 250ms,box-shadow 250ms; }
@@ -115,14 +115,10 @@ main > .section[data-view] {
 .section .timeline-shell { background: var(--card-bg); color: var(--text); border: 1px solid var(--nav-border); border-radius: 18px; padding: 18px; }
 .section .timeline-rail { display: none; }
 .section .timeline-item__date { color: var(--focus); }
-.about .service-stack { gap: 12px; }
-.about .service-card,#interestsGrid article { padding: 18px; }
+#interestsGrid article { padding: 18px; }
 .contact .contact-panel { padding: 0; background: transparent; color: var(--text); box-shadow: none; border: 0; border-radius: 0; align-items: start; gap: 16px; }
 .contact-copy,.section .contact-form { padding: 20px; }
 .contact-direct { margin: 0; }
-@media (min-width: 901px) {
-  .about.section[data-view] .section-heading { display: grid; align-items: end; }
-}
 .command-dialog { margin: auto; padding: 0; width: min(480px,calc(100% - 32px)); max-height: min(82dvh,620px); border: 1px solid var(--nav-border); border-radius: 17px; color: var(--text); background: var(--chip-bg); box-shadow: 0 18px 80px var(--shadow); }
 .command-dialog::backdrop,.drawer-backdrop { background: var(--scrim); backdrop-filter: blur(4px); }
 .command-shell { padding: 10px; box-shadow: none; border: 0; background: var(--chip-bg); }

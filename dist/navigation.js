@@ -125,7 +125,7 @@ const portfolioNav = (() => {
     updateShell();
     updateTitle();
     window.scrollTo({top:0,behavior:"instant"});
-    if (focus && !document.querySelector("dialog[open]")) el(id).querySelector("h1").focus({preventScroll:true});
+    if (focus && !document.querySelector("dialog[open]")) (el(id).querySelector("h1") || el(id))?.focus({preventScroll:true});
     document.dispatchEvent(new CustomEvent("portfolio:view",{detail:id}));
   }
   async function animatePanel(panel,frames,duration) {

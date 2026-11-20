@@ -14,15 +14,9 @@
       roles: "Web Development, Full-Stack and UI/UX", location: "Bukidnon, Philippines",
       availability: "Available for select projects", resume: "",
       portrait: "assets/portrait-normal.jpg", auraPortrait: "assets/portrait-aura.jpg", alt: "Portrait of Christian Rey Adolfo",
-      aboutTitle: "About my practice.", aboutIntro: "I work across interface design, front-end development and data visualization.",
-      bio: "I start with the people who will use a product. A conversation, a paper sketch and a working prototype usually teach me more than a long brief.",
       footer: "Independent design & development"
     },
-    services: [
-      {title: "Interface design", description: "Layouts, prototypes and component libraries for products that need room to grow."},
-      {title: "Web development", description: "Responsive websites and applications with accessible interactions and practical content tools."},
-      {title: "Data visualization", description: "Dashboards that turn a complex dataset into a clear next decision."}
-    ],
+    services: [],
     interests: [
       {title: "Photography", description: "Collecting references for light, framing, and color."},
       {title: "Field recording", description: "Listening for details on walks and recording the sounds of a place."},
@@ -87,6 +81,7 @@
       if (path === "profile.alt" && item === "Illustrated studio portrait") return "Portrait of " + value.profile.name;
       // Portfolios saved before certificates existed inherit the supplied documents.
       if (path === "certificates" && item === undefined) return copy(defaults.certificates);
+      if (path === "services") return [];
       if (Array.isArray(template)) {
         if (!Array.isArray(item) || item.length > 80) throw Error("Invalid collection: " + path);
         return item.map((row, index) => check(row, template[0], path + "." + index));
