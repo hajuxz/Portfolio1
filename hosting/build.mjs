@@ -6,7 +6,7 @@ const files = {};
 const byContent = new Map(), aliases = {};
 const workspaceAssets = (await readdir(new URL("assets/workspace/",root))).map(name => "assets/workspace/"+name);
 const mime = {txt:"text/plain",html:"text/html",css:"text/css",js:"text/javascript",svg:"image/svg+xml"};
-for (const file of ["sequence-config.js","hero.js","sunglasses.js","workspace-icons.js",...workspaceAssets.filter(name=>!name.endsWith(".woff2")),"index.html","styles.css","portrait.css","navigation-config.js","navigation.js","navigation.css","content.js","app.js","studio.js","assets/portrait-placeholder.svg",...defaults.projects.map(p=>p.image)]) {
+for (const file of ["sequence-config.js","hero.js","frame-cache.js","sunglasses.js","workspace-icons.js",...workspaceAssets.filter(name=>!name.endsWith(".woff2")),"index.html","styles.css","portrait.css","navigation-config.js","navigation.js","navigation.css","content.js","app.js","studio.js","assets/portrait-placeholder.svg",...defaults.projects.map(p=>p.image)]) {
   files["/"+file] = {mime:mime[file.split(".").at(-1)],text: await readFile(new URL(file,root),"utf8")};
 }
 files["/assets/anton/LICENSE"] = {mime:"text/plain",text:await readFile(new URL("assets/anton/LICENSE",root),"utf8")};

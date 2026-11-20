@@ -192,6 +192,7 @@ const portfolioNav = (() => {
   let desired = root.dataset.theme, running = null;
   function announce(theme) {
     desired = root.dataset.targetTheme = theme;
+    document.dispatchEvent(new CustomEvent("portfolio:theme-target",{detail:theme}));
     el("themeLabel").textContent = theme === "dark" ? "Light" : "Dark";
     themeButton.setAttribute("aria-pressed",String(theme === "dark"));
     document.querySelector('meta[name="theme-color"]').content = config.colors[theme].bg;

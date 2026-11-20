@@ -26,6 +26,7 @@
     </script>
     <link rel="stylesheet" href="styles.css" />
     <link rel="stylesheet" href="portrait.css" />
+    <link rel="stylesheet" href="home-sections.css" />
     <link rel="stylesheet" href="navigation.css" />
   </head>
   <body>
@@ -48,27 +49,32 @@
     </aside>
     <main id="main-content">
       <section id="home" class="sunglasses-hero" data-hero-media data-view="home" aria-labelledby="homeTitle">
-        <div id="heroStage" class="hero-stage">
-          <div class="hero-media" aria-hidden="true">
-            <div class="hero-framing" id="heroFraming">
-              <div class="hero-look" data-look="dark"><img alt="" fetchpriority="high"><canvas></canvas></div>
-              <div class="hero-look" data-look="light"><img alt="" fetchpriority="high"><canvas></canvas></div>
+        <div id="heroTrack" class="hero-track">
+          <div id="heroStage" class="hero-stage">
+            <div class="hero-media" aria-hidden="true">
+              <div class="hero-framing" id="heroFraming">
+                <div class="hero-look" data-look="dark"><img alt="" fetchpriority="high"><canvas></canvas></div>
+                <div class="hero-look" data-look="light"><img alt="" fetchpriority="high"><canvas></canvas></div>
+              </div>
             </div>
+            <div class="hero-bottom-grad" aria-hidden="true"></div>
+            <div class="hero-name-block" id="heroNameBlock">
+              <h1 id="homeTitle" class="hero-display-name" tabindex="-1">CHRISTIAN REY ADOLFO</h1>
+              <div class="hero-info-line" aria-hidden="true"></div>
+              <ul class="hero-info-row">
+                <li><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M20 10c0 5-8 11-8 11S4 15 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="2.6"/></svg><span id="heroLocation">Bukidnon, Philippines</span></li>
+                <li><svg aria-hidden="true" viewBox="0 0 24 24"><path d="m2 9 10-5 10 5-10 5L2 9Zm4 2v6c4 3 8 3 12 0v-6m4-2v7"/></svg><span id="heroEducation">IT Student at Bukidnon State University</span></li>
+                <li><svg aria-hidden="true" viewBox="0 0 24 24"><path d="m7 7-5 5 5 5m10-10 5 5-5 5m-4-14-2 18"/></svg><span id="heroFocus">Web Development, Full-Stack and UI/UX</span></li>
+              </ul>
+            </div>
+            <aside class="hero-widgets" aria-label="Time and availability">
+              <div><span>Local time</span><strong id="localTime"></strong></div>
+              <div><span>Status</span><strong class="hero-status" id="heroAvailability"></strong></div>
+            </aside>
+            <div class="hero-guides" aria-hidden="true"></div>
           </div>
-          <div class="hero-copy">
-            <h1 id="homeTitle" class="hero-name" tabindex="-1"><span>Christian Rey</span><span>Adolfo</span></h1>
-            <ul class="hero-details">
-              <li><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M20 10c0 5-8 11-8 11S4 15 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="2.6"/></svg><span id="heroLocation">Bukidnon, Philippines</span></li>
-              <li><svg aria-hidden="true" viewBox="0 0 24 24"><path d="m2 9 10-5 10 5-10 5L2 9Zm4 2v6c4 3 8 3 12 0v-6m4-2v7"/></svg><span id="heroEducation">IT Student at Bukidnon State University</span></li>
-              <li><svg aria-hidden="true" viewBox="0 0 24 24"><path d="m7 7-5 5 5 5m10-10 5 5-5 5m-4-14-2 18"/></svg><span id="heroFocus">Web Development, Full-Stack and UI/UX</span></li>
-            </ul>
-          </div>
-          <aside class="hero-widgets" aria-label="Time and availability">
-            <div><span>Local time</span><strong id="localTime"></strong></div>
-            <div><span>Status</span><strong class="hero-status" id="heroAvailability"></strong></div>
-          </aside>
-          <div class="hero-guides" aria-hidden="true"></div>
         </div>
+        <div id="homeSections" class="home-sections"></div>
       </section>
 
       <section class="about section" id="about" data-view="about" hidden aria-labelledby="aboutTitle">
@@ -124,7 +130,7 @@
       <section class="skills section" id="skills" data-view="skills" hidden aria-labelledby="skillsTitle">
         <header class="section-heading reveal">
           <div>
-            <p class="kicker">Core competencies</p>
+            <p class="kicker kicker--skills"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg><span>CORE COMPETENCIES</span></p>
             <h1 id="skillsTitle" tabindex="-1">Technical Skills Profile</h1>
           </div>
         </header>
@@ -289,7 +295,9 @@
     <script src="navigation.js"></script>
     <script src="hero.js"></script>
     <script src="app.js"></script>
+    <script src="home-sections.js"></script>
     <script src="studio.js"></script>
+    <script src="frame-cache.js"></script>
     <script src="sunglasses.js"></script>
   </body>
 </html>

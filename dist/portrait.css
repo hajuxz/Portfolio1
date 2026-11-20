@@ -1,3 +1,13 @@
+/* ═══════════════════════════════════════════════════════════════
+   HERO SECTION — full portrait with glass letters in front
+   Layer order (back → front):
+     z-0  hero-media        — frame sequence / background gradient
+     z-3  hero-stage::before — side vignettes
+     z-4  hero-bottom-grad  — lightened bottom gradient for legibility
+     z-10 hero-name-block   — glass <h1> + hairline + info row
+     z-10 hero-widgets      — Local Time / Status panel
+   ═══════════════════════════════════════════════════════════════ */
+
 [data-hero-media] {
   --hero-text: #fff;
   --hero-muted: rgb(255 255 255 / .84);
@@ -10,8 +20,16 @@
   --gutter: clamp(24px, 4.7vw, 96px);
   position: sticky; top: 0; height: 100vh; height: 100dvh; min-height: 100svh;
   width: 100%; overflow: clip; isolation: isolate; container-type: inline-size;
+  contain: layout paint style; will-change: transform;
+  background: radial-gradient(ellipse 80% 70% at 50% 40%, #1e1e1e, #111 60%, #0a0a0a);
 }
-.hero-media,.hero-look,.hero-stage::before,.hero-guides {
+[data-target-theme="light"] .hero-stage,
+[data-theme="light"] .hero-stage {
+  background: radial-gradient(ellipse 80% 70% at 50% 40%, #e8e6e0, #d9d6ce 60%, #c8c5bd);
+}
+
+/* ── z-0: frame sequence media ── */
+.hero-media,.hero-look,.hero-guides {
   position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none;
 }
 .hero-media { z-index: 0; overflow: hidden; }
@@ -19,32 +37,208 @@
   position: absolute; top: 0; left: 0; width: var(--draw-w,100%); height: var(--draw-h,100%);
   transform: translate3d(var(--draw-x,0px),0,0); transform-origin: center top;
 }
-.hero-look > :is(img,canvas) { position: absolute; inset: 0; display: block; width: 100%; height: 100%; max-width: none; object-fit: cover; object-position: center top; }
+.hero-look > :is(img,canvas) {
+  position: absolute; inset: 0; display: block; width: 100%; height: 100%;
+  max-width: none; object-fit: cover; object-position: center top;
+}
 .hero-look canvas { visibility: hidden; }
 .hero-framing[data-painted] canvas { visibility: visible; }
-/* One opaque base plus a fading light layer keeps brightness constant in a reversal. */
 .hero-look[data-look="light"] { opacity: 0; will-change: opacity; transition: opacity var(--theme-duration) var(--theme-ease); }
-[data-target-theme="light"] .hero-look[data-look="light"] { opacity: 1; }
+[data-target-theme="light"] .hero-look[data-look="light"],
+[data-theme="light"] .hero-look[data-look="light"] { opacity: 1; }
 .hero-look .derived-light { filter: brightness(1.5) contrast(.86); }
+
+/* ── z-3: side vignettes ── */
 .hero-stage::before {
-  content: ""; z-index: 1; background: linear-gradient(90deg,rgba(0,0,0,.50),transparent 46%,transparent 70%,rgba(0,0,0,.34)),linear-gradient(0deg,rgba(0,0,0,.38),transparent 32%);
+  content: ""; position: absolute; inset: 0; width: 100%; height: 100%;
+  z-index: 3; pointer-events: none;
+  background:
+    linear-gradient(90deg, rgba(0,0,0,.35), transparent 38%, transparent 62%, rgba(0,0,0,.25));
   transition: opacity var(--theme-duration) var(--theme-ease); will-change: opacity;
 }
-[data-target-theme="light"] .hero-stage::before { opacity: 0; }
+[data-target-theme="light"] .hero-stage::before,
+[data-theme="light"] .hero-stage::before {
+  background:
+    linear-gradient(90deg, rgba(0,0,0,.12), transparent 38%, transparent 62%, rgba(0,0,0,.08));
+}
+
+/* ── z-4: bottom gradient for legibility (reduced darkness by ~30% so face/neck stay bright) ── */
+.hero-bottom-grad {
+  position: absolute; inset: 0; z-index: 4; pointer-events: none;
+  background: linear-gradient(to bottom, transparent 62%, rgba(0,0,0,.25) 76%, rgba(16,15,19,.6) 92%, rgba(16,15,19,1) 100%);
+  transition: opacity var(--theme-duration) var(--theme-ease);
+}
+[data-target-theme="light"] .hero-bottom-grad,
+[data-theme="light"] .hero-bottom-grad {
+  background: linear-gradient(to bottom, transparent 62%, rgba(230,228,222,.22) 76%, rgba(249,249,245,.6) 92%, rgba(249,249,245,1) 100%);
+}
+
+/* ── z-10: hero name block (centered at lower-middle of hero) ── */
+.hero-name-block {
+  position: absolute; z-index: 10;
+  left: 0; right: 0; bottom: 0;
+  display: flex; flex-direction: column; align-items: center;
+  padding: 0 var(--gutter) 32px;
+  pointer-events: none;
+}
+
+.hero-display-name {
+  margin: 0; padding: 0;
+  font: 400 clamp(2.5rem, 8.5vw, 8.2rem)/0.9 Anton, Impact, sans-serif;
+  text-transform: uppercase; letter-spacing: -0.01em;
+  text-align: center; white-space: nowrap;
+  pointer-events: auto;
+  position: relative;
+  overflow: visible;
+}
+
+/* ── Glass letter style (Dark Mode) ──
+   Fill: nearly transparent vertical gradient rgba(255,255,255,0.20) -> rgba(255,255,255,0.03)
+   Outline: crisp 1.5px stroke rgba(245,245,240,0.92)
+   Shadow: soft separation drop shadow
+   Sheen & Cursor highlight: layered gradients inside letters only */
+.hero-display-name .letter {
+  display: inline-block;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+  -webkit-text-stroke: 1.5px rgba(245,245,240,0.92);
+  paint-order: stroke fill;
+  background-image:
+    radial-gradient(circle 200px at var(--mx, -999px) var(--my, -999px), rgba(255,255,255,0.20), transparent 70%),
+    linear-gradient(115deg, transparent 0%, transparent 35%, rgba(255,255,255,0.25) 50%, transparent 65%, transparent 100%),
+    linear-gradient(180deg, rgba(255,255,255,0.20) 0%, rgba(255,255,255,0.03) 100%);
+  background-size: 100% 100%, 260% 100%, 100% 100%;
+  background-position: 0 0, 200% 0, 0 0;
+  background-repeat: no-repeat;
+  background-attachment: fixed, fixed, scroll;
+  -webkit-background-clip: text;
+  background-clip: text;
+  filter: drop-shadow(0 2px 14px rgba(0,0,0,0.35));
+  opacity: 0;
+  transform: translateY(0.35em);
+  will-change: opacity, transform, background-position;
+}
+
+/* On reveal: letters rise with staggered animation */
+.hero-display-name.is-revealed .letter {
+  opacity: 1;
+  transform: translateY(0);
+  transition: opacity 0.9s cubic-bezier(.2,.8,.2,1), transform 0.9s cubic-bezier(.2,.8,.2,1);
+}
+
+/* Diagonal light sheen sweep across letters on load (~1.4s) */
+.hero-display-name.is-revealed .letter {
+  animation: glass-sheen-sweep 1.4s cubic-bezier(0.2, 0.8, 0.2, 1) 0.5s 1 forwards;
+}
+
+@keyframes glass-sheen-sweep {
+  0% {
+    background-position: 0 0, -160% 0, 0 0;
+  }
+  100% {
+    background-position: 0 0, 260% 0, 0 0;
+  }
+}
+
+/* ── Light Mode Glass Letters ──
+   Outline: rgba(17,17,17,0.85)
+   Fill: rgba(0,0,0,0.12) to rgba(0,0,0,0.02)
+   Sheen: soft white streak */
+[data-target-theme="light"] .hero-display-name .letter,
+[data-theme="light"] .hero-display-name .letter {
+  -webkit-text-stroke: 1.5px rgba(17,17,17,0.85);
+  background-image:
+    radial-gradient(circle 200px at var(--mx, -999px) var(--my, -999px), rgba(255,255,255,0.40), transparent 70%),
+    linear-gradient(115deg, transparent 0%, transparent 35%, rgba(255,255,255,0.40) 50%, transparent 65%, transparent 100%),
+    linear-gradient(180deg, rgba(0,0,0,0.12) 0%, rgba(0,0,0,0.02) 100%);
+  filter: drop-shadow(0 2px 12px rgba(0,0,0,0.18));
+}
+
+/* ── Reduced motion compliance ── */
+@media (prefers-reduced-motion: reduce) {
+  .hero-display-name .letter {
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
+    animation: none !important;
+    background-image: linear-gradient(180deg, rgba(255,255,255,0.20) 0%, rgba(255,255,255,0.03) 100%) !important;
+    background-attachment: scroll !important;
+  }
+  [data-target-theme="light"] .hero-display-name .letter,
+  [data-theme="light"] .hero-display-name .letter {
+    background-image: linear-gradient(180deg, rgba(0,0,0,0.12) 0%, rgba(0,0,0,0.02) 100%) !important;
+  }
+}
+
+/* ── Info hairline + info row ── */
+.hero-info-line {
+  width: min(90%, 1100px);
+  height: 1px;
+  margin: clamp(10px, 1.4vh, 18px) 0 clamp(8px, 1.2vh, 14px);
+  background: var(--hero-line);
+  opacity: 0.5;
+}
+[data-target-theme="light"] .hero-info-line,
+[data-theme="light"] .hero-info-line {
+  background: rgba(17, 24, 39, 0.22);
+}
+
+.hero-info-row {
+  list-style: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(18px, 3vw, 48px);
+  padding: 0;
+  margin: 0;
+  color: var(--hero-muted);
+  pointer-events: auto;
+}
+.hero-info-row li {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font: 500 clamp(10px, 0.72vw, 13px)/1.45 var(--font-body);
+  letter-spacing: 0.045em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.hero-info-row svg {
+  flex: none; width: 14px; height: 14px;
+  fill: none; stroke: currentColor;
+  stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round;
+}
+
+/* Light mode info row */
+[data-target-theme="light"] .hero-info-row,
+[data-theme="light"] .hero-info-row {
+  color: #2b3340;
+}
+
+/* Info row fade-in after name reveal */
+.hero-info-line, .hero-info-row {
+  opacity: 0;
+  transform: translateY(8px);
+  transition: opacity 0.6s ease 0.9s, transform 0.6s ease 0.9s;
+}
+.hero-name-block.is-revealed .hero-info-line,
+.hero-name-block.is-revealed .hero-info-row {
+  opacity: 1;
+  transform: none;
+}
+.hero-name-block.is-revealed .hero-info-line {
+  opacity: 0.5;
+}
+@media (prefers-reduced-motion: reduce) {
+  .hero-info-line, .hero-info-row { opacity: 1; transform: none; transition: none; }
+  .hero-info-line { opacity: 0.5; }
+}
+
+/* ── z-10: widgets (Local Time / Status) ── */
 .hero-light-ink {
   --hero-text: #171d30; --hero-muted: #37424e; --hero-line: rgb(32 43 54 / .35); --hero-shadow: 0 1px 4px rgb(255 255 255 / .25);
 }
-.hero-copy,.hero-widgets { position: absolute; z-index: 10; color: var(--hero-text); text-shadow: var(--hero-shadow); }
-.hero-copy { top: 50%; left: var(--gutter); transform: translateY(-50%); width: calc(30cqw - var(--gutter)); max-width: 30vw; }
-.hero-name {
-  margin: 0; color: inherit; font: 400 clamp(3rem,7.5vw,8.5rem)/.9 Anton,Impact,sans-serif;
-  letter-spacing: -.025em; text-transform: uppercase;
-}
-.hero-name span { display: block; width: max-content; max-width: none; white-space: nowrap; transform-origin: left; transform: scaleX(var(--name-fit,1)); }
-.hero-details { list-style: none; display: grid; gap: 9px; padding: 0; margin: clamp(20px,3.2vh,34px) 0 0; color: var(--hero-muted); }
-.hero-details li { display: flex; align-items: center; gap: 8px; font: 500 clamp(11px,.78vw,15px)/1.45 var(--font-body); letter-spacing: .035em; text-transform: uppercase; }
-.hero-details svg { flex: none; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
-.hero-details svg { width: 15px; height: 15px; }
+.hero-widgets { position: absolute; z-index: 10; color: var(--hero-text); text-shadow: var(--hero-shadow); }
 .hero-widgets { top: 50%; right: var(--gutter); width: clamp(110px,10vw,178px); display: grid; gap: 18px; transform: translateY(-50%); }
 .hero-widgets > div { border-top: 1px solid var(--hero-line); padding-top: 9px; }
 .hero-widgets span,.hero-widgets strong { display: block; }
@@ -56,35 +250,73 @@
 .hero-guides::before,.hero-guides::after { content:""; position:absolute; background:#84ffe4; box-shadow:0 0 1px #122; }
 .hero-guides::before { top: 0; bottom: 0; left: var(--guide-x,50%); width: 1px; }
 .hero-guides::after { left: 0; right: 0; top: var(--guide-y,40%); height: 1px; }
-.sunglasses-hero[data-scrub]::after { content: ""; display: block; height: var(--scrub-travel,max(1500px,240svh)); pointer-events: none; }
+.hero-track {
+  position: relative;
+  width: 100%;
+  height: calc(100vh + var(--scrub-travel, max(1500px, 240svh)));
+}
+.sunglasses-hero[data-scrub]::after { display: none; }
+
+/* Keep accessible hero-name visually hidden if present */
+.hero-name {
+  margin: 0; color: inherit;
+  position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0;
+}
+.hero-name span { display: block; }
+
+.hero-copy { position: absolute; z-index: -1; }
+
+/* ── Mobile & Responsive Breakpoints ── */
+@media (max-width: 768px) {
+  .hero-name-block {
+    bottom: clamp(105px, 14svh, 145px);
+    padding-bottom: 0;
+    align-items: stretch;
+  }
+  .hero-display-name {
+    font-size: clamp(2.4rem, 15vw, 4.8rem);
+    white-space: normal;
+    line-height: 0.88;
+    text-align: center;
+  }
+  .name-mobile-line {
+    display: block;
+    white-space: nowrap;
+    text-align: center;
+  }
+  .hero-info-line {
+    width: 100%;
+    margin: 12px 0 10px;
+  }
+  .hero-info-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+  }
+}
+
 @media (aspect-ratio < 1/1) {
   .hero-stage { --gutter: clamp(17px,4vw,38px); }
-  .hero-stage::before, [data-target-theme="light"] .hero-stage::before { opacity: 1; background: linear-gradient(0deg,rgba(0,0,0,.82),rgba(0,0,0,.58) 28%,transparent 56%); }
+  .hero-stage::before, [data-target-theme="light"] .hero-stage::before {
+    background: linear-gradient(90deg, rgba(0,0,0,.12), transparent 30%, transparent 70%, rgba(0,0,0,.12));
+  }
   [data-theme] [data-hero-media] { --hero-text: #fff; --hero-muted: rgb(255 255 255 / .90); --hero-line: rgb(255 255 255 / .46); --hero-shadow: 0 1px 4px rgb(0 0 0 / .45); }
-  .hero-copy { top: auto; bottom: clamp(115px,14svh,170px); transform: none; width: min(81cqw,520px); max-width: none; }
-  .hero-name { font-size: clamp(3rem,9vw,6.4rem); }
-  .hero-details { gap: 5px; margin-top: 15px; }
-  .hero-details li { font-size: clamp(11px,1.65vw,14px); }
   .hero-widgets { top: auto; bottom: max(16px,env(safe-area-inset-bottom)); width: min(40vw,200px); transform: none; gap: 6px; }
   .hero-widgets > div { padding-top: 4px; }
   .hero-widgets span { font-size: 9px; margin-bottom: 1px; }
   .hero-widgets strong { font-size: 11px; }
 }
-@media (min-width:1024px) and (max-width:1500px) {
-  .sidebar-expanded .hero-copy { top: auto; bottom: 108px; transform: none; }
-  .sidebar-expanded .hero-name { font-size: clamp(3rem,6vw,6rem); }
-}
+
 @media (max-height:500px) and (min-aspect-ratio:1/1) {
-  .hero-copy { top: 45%; }
-  .hero-name { font-size: clamp(2.4rem,12vh,4rem); }
-  .hero-details { gap: 3px; margin-top: 8px; }
+  .hero-display-name { font-size: clamp(2.2rem, 10vh, 5rem); }
 }
+
 @media (prefers-reduced-motion:reduce), print {
   .sunglasses-hero[data-scrub]::after { display: none; }
   .hero-look,.hero-stage::before { transition: none !important; }
 }
 
-.hero-copy.hero-light-ink,.hero-widgets.hero-light-ink { pointer-events:none; }
+.hero-widgets.hero-light-ink { pointer-events:none; }
 .hero-dark-ink,.hero-light-ink { will-change:opacity; transition:opacity var(--theme-duration) var(--theme-ease); }
 .hero-light-ink { opacity:0; }
 [data-target-theme="light"] .hero-light-ink { opacity:1; }

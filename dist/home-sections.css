@@ -1,0 +1,696 @@
+/* ═══════════════════════════════════════════════════════════════
+   HOME SECTIONS — Services Grid (Part A) + Process Pipeline (Part B)
+   Reuses existing portfolio tokens, dark/light themes, and typography.
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ── Container for the new sections below the hero ── */
+.home-sections {
+  position: relative;
+  width: 100%;
+  background: var(--paper);
+  color: var(--ink);
+  overflow-x: clip;
+}
+
+/* ── Shared Section Shell ── */
+.home-section {
+  position: relative;
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 clamp(20px, 4.5vw, 48px);
+}
+
+.home-section--services {
+  padding-top: clamp(96px, 12vh, 120px);
+  padding-bottom: clamp(60px, 8vh, 80px);
+}
+
+.home-section--pipeline {
+  padding-top: clamp(60px, 8vh, 80px);
+  padding-bottom: clamp(96px, 12vh, 130px);
+}
+
+/* ── Section Header Pattern ── */
+.hs-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 20px 32px;
+  margin-bottom: clamp(36px, 5vh, 56px);
+}
+.hs-header__copy {
+  max-width: 680px;
+}
+.hs-eyebrow {
+  font: 500 11px/1.4 var(--font-mono);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin: 0 0 10px;
+}
+.hs-title {
+  font: 400 clamp(2rem, 4vw, 3rem)/1.08 Anton, Impact, var(--font-display);
+  letter-spacing: 0.01em;
+  text-transform: uppercase;
+  margin: 0 0 10px;
+  color: var(--ink);
+}
+.hs-subtitle {
+  font: 400 clamp(0.92rem, 1.1vw, 1.05rem)/1.6 var(--font-body);
+  color: var(--muted);
+  margin: 0;
+}
+.hs-cta {
+  font: 500 13px/1.4 var(--font-mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink);
+  text-decoration: none;
+  cursor: pointer;
+  background: none;
+  border: none;
+  padding: 8px 0;
+  white-space: nowrap;
+  transition: opacity 0.2s, transform 0.2s;
+  align-self: flex-end;
+}
+.hs-cta:hover {
+  opacity: 0.65;
+  transform: translateX(3px);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   PART A — Services Grid
+   ═══════════════════════════════════════════════════════════════ */
+.services-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: clamp(16px, 2vw, 24px);
+}
+
+.svc-card {
+  position: relative;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  padding: clamp(24px, 2.5vw, 34px);
+  background: var(--surface);
+  display: flex;
+  flex-direction: column;
+  transition: border-color 0.25s, transform 0.25s, box-shadow 0.25s;
+}
+.svc-card:hover {
+  border-color: var(--line-strong);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-sm);
+}
+
+/* Card Top: Icon inside circle (left) + index "01" (right) */
+.svc-card__top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: clamp(16px, 2vw, 22px);
+}
+.svc-card__icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  border: 1px solid var(--line);
+  background: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.svc-card__icon svg {
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: var(--ink);
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.svc-card__idx {
+  font: 500 12px/1 var(--font-mono);
+  color: var(--muted-2);
+  letter-spacing: 0.08em;
+  padding-top: 4px;
+}
+
+/* Card Text */
+.svc-card__title {
+  font: 600 clamp(1.08rem, 1.4vw, 1.25rem)/1.3 var(--font-body);
+  margin: 0 0 8px;
+  color: var(--ink);
+}
+.svc-card__desc {
+  font: 400 clamp(0.85rem, 0.98vw, 0.94rem)/1.6 var(--font-body);
+  color: var(--muted);
+  margin: 0 0 16px;
+}
+
+/* Bullets */
+.svc-card__bullets {
+  list-style: none;
+  margin: 0 0 auto;
+  padding: 0 0 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.svc-card__bullets li {
+  position: relative;
+  padding-left: 18px;
+  font: 400 clamp(0.82rem, 0.92vw, 0.9rem)/1.55 var(--font-body);
+  color: var(--muted);
+}
+.svc-card__bullets li::before {
+  content: "";
+  position: absolute;
+  left: 3px;
+  top: 9px;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--muted-2);
+}
+
+/* Hairline Divider & Stack Chips */
+.svc-card__divider {
+  height: 1px;
+  background: var(--line);
+  margin-bottom: 14px;
+}
+.svc-card__stack-label {
+  font: 500 10px/1.2 var(--font-mono);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--muted-2);
+  margin: 0 0 10px;
+}
+.svc-card__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.svc-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  font: 500 11px/1.3 var(--font-mono);
+  color: var(--ink);
+  background: transparent;
+  transition: border-color 0.2s, background 0.2s;
+  white-space: nowrap;
+  user-select: none;
+}
+.svc-chip:hover {
+  border-color: var(--line-strong);
+}
+.svc-chip img {
+  width: 14px;
+  height: 14px;
+  display: block;
+  filter: grayscale(1);
+  opacity: 0.75;
+  transition: filter 0.25s, opacity 0.25s;
+}
+.svc-chip:hover img {
+  filter: grayscale(0);
+  opacity: 1;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   PART B — Process Pipeline
+   ═══════════════════════════════════════════════════════════════ */
+.pipeline-header-controls {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.pipeline-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font: 500 12px/1 var(--font-mono);
+  color: var(--muted);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.pipeline-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #8be4c4;
+  display: inline-block;
+  box-shadow: 0 0 6px rgba(139, 228, 196, 0.4);
+}
+.pipeline-status.is-paused .pipeline-dot {
+  background: var(--muted-2);
+  box-shadow: none;
+}
+.pipeline-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font: 500 12px/1.4 var(--font-mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink);
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 7px 16px;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s, transform 0.15s;
+}
+.pipeline-toggle:hover {
+  border-color: var(--line-strong);
+  transform: translateY(-1px);
+}
+.pipeline-toggle svg {
+  flex-shrink: 0;
+  stroke: currentColor;
+}
+
+/* Pipeline Outer Shell */
+.pipeline-shell {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  padding: clamp(24px, 3.5vw, 44px);
+  background: var(--surface);
+}
+
+/* Panel Top Header */
+.pipeline-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: clamp(22px, 3vw, 32px);
+  padding-bottom: clamp(14px, 1.8vw, 18px);
+  border-bottom: 1px solid var(--line);
+}
+.pipeline-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font: 600 11px/1.4 var(--font-mono);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.pipeline-badge svg {
+  stroke: currentColor;
+}
+.pipeline-walkthrough {
+  font: 500 12px/1.4 var(--font-mono);
+  color: var(--muted-2);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* ── 3×3 Snake Grid & Connectors Layout ── */
+.pipeline-grid-wrapper {
+  position: relative;
+  margin-bottom: clamp(18px, 2.5vw, 28px);
+}
+
+.pipeline-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(3, auto);
+  gap: clamp(14px, 1.8vw, 22px);
+  position: relative;
+  z-index: 2;
+}
+
+/* Desktop Snake Ordering via CSS Grid:
+   Row 1: 01, 02, 03 (L to R)
+   Row 2: 06, 05, 04 (R to L: 04 is col 3, 05 is col 2, 06 is col 1)
+   Row 3: 07, 08, 09 (L to R) */
+.step-card[data-step-num="1"] { grid-column: 1; grid-row: 1; }
+.step-card[data-step-num="2"] { grid-column: 2; grid-row: 1; }
+.step-card[data-step-num="3"] { grid-column: 3; grid-row: 1; }
+.step-card[data-step-num="4"] { grid-column: 3; grid-row: 2; }
+.step-card[data-step-num="5"] { grid-column: 2; grid-row: 2; }
+.step-card[data-step-num="6"] { grid-column: 1; grid-row: 2; }
+.step-card[data-step-num="7"] { grid-column: 1; grid-row: 3; }
+.step-card[data-step-num="8"] { grid-column: 2; grid-row: 3; }
+.step-card[data-step-num="9"] { grid-column: 3; grid-row: 3; }
+
+/* ── Step Card Button ── */
+.step-card {
+  position: relative;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  padding: clamp(18px, 2vw, 24px);
+  background: var(--surface);
+  text-align: left;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 120px;
+  overflow: hidden;
+  color: var(--ink);
+  transition: border-color 0.25s, transform 0.25s, box-shadow 0.25s, background-color 0.25s;
+  outline: none;
+}
+.step-card:hover {
+  border-color: var(--line-strong);
+  transform: translateY(-2px);
+}
+.step-card:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Active Step Styling */
+.step-card[aria-current="step"],
+.step-card.is-active {
+  border-color: var(--ink);
+  background: var(--surface-2);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-sm);
+}
+html[data-theme="dark"] .step-card[aria-current="step"],
+html[data-theme="dark"] .step-card.is-active {
+  border-color: rgba(255, 255, 255, 0.4);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+/* Card Progress Bar along bottom edge */
+.step-card__progress {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  height: 2.5px;
+  width: 0%;
+  background: var(--ink);
+  border-radius: 0 2px 0 0;
+  pointer-events: none;
+  z-index: 4;
+}
+html[data-theme="dark"] .step-card__progress {
+  background: #f6f7fb;
+}
+
+/* Card Header */
+.step-card__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 2px;
+}
+.step-card__idx {
+  font: 600 12px/1 var(--font-mono);
+  color: var(--muted-2);
+  letter-spacing: 0.06em;
+}
+.step-card[aria-current="step"] .step-card__idx {
+  color: var(--ink);
+}
+.step-card__icon {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.step-card__icon svg {
+  stroke: var(--muted);
+  transition: stroke 0.2s;
+}
+.step-card:hover .step-card__icon svg,
+.step-card[aria-current="step"] .step-card__icon svg {
+  stroke: var(--ink);
+}
+
+.step-card__title {
+  font: 600 clamp(0.95rem, 1.15vw, 1.05rem)/1.3 var(--font-body);
+  margin: 0;
+  color: var(--ink);
+}
+.step-card__desc {
+  font: 400 clamp(0.78rem, 0.9vw, 0.86rem)/1.5 var(--font-body);
+  color: var(--muted);
+  margin: 0;
+}
+
+/* ── Desktop Snake Connectors Layer ── */
+.pipeline-connectors {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+  display: block;
+}
+.conn-arrow {
+  position: absolute;
+  color: var(--line-strong);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.25s;
+}
+.conn-arrow svg {
+  stroke: var(--muted-2);
+  opacity: 0.6;
+}
+
+/* Positioning connector arrows in the grid gaps */
+/* Row 1: 01 -> 02 */
+.conn-r1-12 {
+  left: calc(33.333% - 10px);
+  top: 18%;
+  transform: translateX(-50%);
+}
+/* Row 1: 02 -> 03 */
+.conn-r1-23 {
+  left: calc(66.666% - 10px);
+  top: 18%;
+  transform: translateX(-50%);
+}
+/* Row 1 to Row 2: 03 down to 04 */
+.conn-corner-34 {
+  right: 16%;
+  top: calc(33.333% - 8px);
+  transform: translateY(-50%);
+}
+/* Row 2: 04 -> 05 (Left) */
+.conn-r2-45 {
+  left: calc(66.666% - 10px);
+  top: 50%;
+  transform: translateX(-50%);
+}
+/* Row 2: 05 -> 06 (Left) */
+.conn-r2-56 {
+  left: calc(33.333% - 10px);
+  top: 50%;
+  transform: translateX(-50%);
+}
+/* Row 2 to Row 3: 06 down to 07 */
+.conn-corner-67 {
+  left: 16%;
+  top: calc(66.666% - 8px);
+  transform: translateY(-50%);
+}
+/* Row 3: 07 -> 08 */
+.conn-r3-78 {
+  left: calc(33.333% - 10px);
+  top: 82%;
+  transform: translateX(-50%);
+}
+/* Row 3: 08 -> 09 */
+.conn-r3-89 {
+  left: calc(66.666% - 10px);
+  top: 82%;
+  transform: translateX(-50%);
+}
+
+/* ── Feedback Return Line (09 -> 03) ── */
+.pipeline-feedback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 14px 0 20px;
+  border-bottom: 1px dashed var(--line);
+  margin-bottom: clamp(20px, 2.5vw, 28px);
+}
+.pipeline-feedback__text {
+  font: 500 12px/1.4 var(--font-mono);
+  color: var(--muted);
+  letter-spacing: 0.05em;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+.pipeline-feedback__text svg {
+  stroke: currentColor;
+}
+
+/* ── Detail Panel (2 columns with cross-fade) ── */
+.pipeline-detail {
+  display: grid;
+  grid-template-columns: 1.1fr 0.9fr;
+  gap: clamp(24px, 3.5vw, 48px);
+  padding: clamp(10px, 1.5vw, 16px) 0 clamp(16px, 2vw, 22px);
+  min-height: 100px;
+}
+.pipeline-detail__left,
+.pipeline-detail__right {
+  transition: opacity 0.25s ease;
+}
+.pipeline-detail__label {
+  font: 600 10px/1.4 var(--font-mono);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--muted-2);
+  margin: 0 0 8px;
+}
+.pipeline-detail__title {
+  font: 600 clamp(1.2rem, 1.6vw, 1.45rem)/1.25 var(--font-body);
+  color: var(--ink);
+  margin: 0 0 8px;
+}
+.pipeline-detail__desc {
+  font: 400 clamp(0.88rem, 1vw, 0.98rem)/1.6 var(--font-body);
+  color: var(--muted);
+  margin: 0;
+}
+.pipeline-detail__output {
+  font: 500 clamp(0.88rem, 1vw, 0.98rem)/1.6 var(--font-body);
+  color: var(--ink);
+  margin: 0;
+  padding: 12px 16px;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+}
+
+/* Footer Hint */
+.pipeline-hint {
+  font: 400 12px/1.5 var(--font-mono);
+  color: var(--muted-2);
+  text-align: center;
+  margin: 16px 0 0;
+  letter-spacing: 0.02em;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   SCROLL REVEAL STYLES (fade up 16px, 500ms, staggered 60ms)
+   ═══════════════════════════════════════════════════════════════ */
+.hs-reveal {
+  opacity: 0;
+  transform: translateY(16px);
+  transition: opacity 500ms cubic-bezier(0.2, 0.75, 0.25, 1) var(--row-delay, 0ms),
+              transform 500ms cubic-bezier(0.2, 0.75, 0.25, 1) var(--row-delay, 0ms);
+  will-change: opacity, transform;
+}
+.hs-reveal.is-shown {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   RESPONSIVE — MOBILE (<= 768px)
+   ═══════════════════════════════════════════════════════════════ */
+@media (max-width: 768px) {
+  .home-section--services {
+    padding-top: 72px;
+    padding-bottom: 48px;
+  }
+  .home-section--pipeline {
+    padding-top: 48px;
+    padding-bottom: 72px;
+  }
+
+  .hs-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+  }
+  .hs-cta {
+    align-self: flex-start;
+  }
+
+  /* Services Grid to 1 Column */
+  .services-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  /* Pipeline Controls & Header */
+  .pipeline-header-controls {
+    width: 100%;
+    justify-content: space-between;
+  }
+  .pipeline-top {
+    flex-direction: row;
+  }
+
+  /* Pipeline Grid: Linear 1 Column (Steps 01 to 09 in order) */
+  .pipeline-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  .step-card[data-step-num] {
+    grid-column: 1 !important;
+    grid-row: auto !important;
+  }
+
+  /* Hide Desktop Snake Connectors Layer */
+  .pipeline-connectors {
+    display: none;
+  }
+
+  /* Add Downward Arrow Between Cards on Mobile */
+  .step-card:not(:last-child)::after {
+    content: "↓";
+    position: absolute;
+    bottom: -13px;
+    left: 50%;
+    transform: translateX(-50%);
+    font: 12px/1 var(--font-mono);
+    color: var(--muted-2);
+    z-index: 5;
+    pointer-events: none;
+  }
+
+  /* Pipeline Detail Panel Stacks */
+  .pipeline-detail {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   PREFERS-REDUCED-MOTION
+   ═══════════════════════════════════════════════════════════════ */
+@media (prefers-reduced-motion: reduce) {
+  .hs-reveal {
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
+  }
+  .step-card {
+    transition: none !important;
+  }
+  .step-card__progress {
+    transition: none !important;
+    display: none !important;
+  }
+  .svc-card {
+    transition: none !important;
+  }
+  .pipeline-detail__left,
+  .pipeline-detail__right {
+    transition: none !important;
+  }
+}

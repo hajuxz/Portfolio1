@@ -62,6 +62,7 @@ try {
   };
   await cmd("Runtime.enable");
   await cmd("Page.enable");
+  await cmd("Page.addScriptToEvaluateOnNewDocument",{source:"\n    window.framePaints={dark:0,light:0,bitmaps:0};\n    const originalDraw=CanvasRenderingContext2D.prototype.drawImage;\n    CanvasRenderingContext2D.prototype.drawImage=function(source,...args){\n      const look=this.canvas.parentElement?.dataset.look;\n      if(look){framePaints[look]++;if(source instanceof ImageBitmap)framePaints.bitmaps++;}\n      return originalDraw.call(this,source,...args);\n    };\n  "});
   await cmd("Page.navigate",{url:origin+"/?sequence#home"});
   await until(()=>evaluate('document.body.classList.contains("ready") && heroFraming.dataset.frame==="1"'));
   const readFrame=()=>evaluate('Number(heroFraming.dataset.frame)');
@@ -77,13 +78,14 @@ try {
     console.log("Aligned and covered",width,height);
   }
   // Compare a downsample of each actual backing store to the matching photo on disk.
-  async function checkPair(index) {
+  async function checkPair(index, both=false) {
     const difference=await evaluate(`(async()=>{const c=document.createElement("canvas");c.width=32;c.height=18;const ctx=c.getContext("2d",{willReadFrequently:true});
       const pixels=source=>{ctx.drawImage(source,0,0,32,18);return ctx.getImageData(0,0,32,18).data};
-      return Promise.all(["dark","light"].map(async theme=>{const img=new Image();img.src=frameURL(theme,${index});await img.decode();
+      const themes=${both} ? ["dark","light"] : [document.documentElement.dataset.targetTheme];
+      return Promise.all(themes.map(async theme=>{const img=new Image();img.src=frameURL(theme,${index});await img.decode();
         const live=heroFraming.querySelector('[data-look="'+theme+'"] canvas');
         const reference=document.createElement("canvas"); reference.width=live.width; reference.height=live.height;
-        reference.getContext("2d",{alpha:false}).drawImage(img,0,0,live.width,live.height);
+        const refCtx=reference.getContext("2d",{alpha:false});refCtx.imageSmoothingQuality="medium";refCtx.drawImage(img,0,0,live.width,live.height);
         const ref=pixels(reference),actual=pixels(live);
         return ref.reduce((sum,n,i)=>sum+Math.abs(n-actual[i]),0)/ref.length;
       }))})()`);
@@ -92,7 +94,8 @@ try {
   for (const index of [1,65,161]) {
     await goFrame(index); await checkPair(index);
     const target=await evaluate('document.documentElement.dataset.targetTheme==="light"?"dark":"light"');
-    await evaluate('themeToggle.click()'); await waitTheme(target);
+    await evaluate('themeToggle.click();new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)))');
+    await checkPair(index,true); await waitTheme(target);
     assert.equal(await readFrame(),index); await checkPair(index);
     if (index===65) {
       for (const [width,height] of [[1366,768],[390,844]]) {
@@ -103,6 +106,15 @@ try {
     assert.equal(await evaluate('themeLabel.textContent'),target==="light"?"Dark":"Light");
   }
   await goFrame(65);
+  // A long fling must advance the visible surface through multiple decoded pictures.
+  const steadyTheme=await evaluate('document.documentElement.dataset.targetTheme');
+  const other=steadyTheme==="dark"?"light":"dark";
+  const counts=await evaluate('({...framePaints})');
+  await goFrame(161); await goFrame(1); await goFrame(65);
+  const after=await evaluate('({...framePaints})');
+  assert.equal(after[other],counts[other],"The hidden surface painted during steady playback");
+  assert.ok(after[steadyTheme]-counts[steadyTheme]>3 && after.bitmaps>counts.bitmaps);
+  await delay(180); assert.deepEqual(await evaluate('({...framePaints})'),after);
   const before=await evaluate('document.documentElement.dataset.targetTheme');
   const btn=await evaluate('(()=>{const b=themeToggle.getBoundingClientRect();return {x:b.x+b.width/2,y:b.y+b.height/2}})()');
   async function pressTheme(){for(const type of ["mousePressed","mouseReleased"]) await cmd("Input.dispatchMouseEvent",{type,button:"left",clickCount:1,...btn});}

@@ -20,6 +20,12 @@ The single page opens at `#home`. The other routes are `#about`, `#work`, `#skil
 - `dist/workspace-icons.js` contains the shared line icons. Bundled Simple Icons and local Inter and Space Mono font files are in `dist/assets/workspace/`.
 - Home scrubs 161 paired JPEGs with scroll. Put the dark export in `dist/assets/frames/dark/` and the matching light export in `dist/assets/frames/white pic/`, named `ezgif-frame-001.jpg` through `ezgif-frame-161.jpg`. Edit `dist/sequence-config.js` for paths, frame count, focal point and theme fade duration. A blank light path derives both looks from the dark frames. Reduced motion keeps one still frame.
 
+### Frame playback and optional WebP export
+
+The four playback settings are at the top of `dist/sequence-config.js`. `LERP_SPEED` controls catch-up per 60 Hz tick (default 0.18), `MAX_DPR` caps device density (2), `MAX_CANVAS_WIDTH` caps the backing width (1920), and `PRELOAD_BATCH_SIZE` sets the number of frame pairs per background batch (8). The player also caps the backing width at the original frame width. The photograph's crop and the 700 ms theme fade use their existing settings.
+
+Every shipped JPEG is 1280 × 720. Keep this size for both exports. For a smaller transfer, run `.\tools\Convert-HeroFrames.ps1` in PowerShell with the `cwebp` encoder on PATH. The script writes quality-78 WebPs in matching `dark` and `white pic` folders under `.local/webp-frames/`. To use them, point the two public frame folders at the converted sets for your build, change both `FRAME_PATH` extensions to `.webp`, and rebuild with `node hosting/build.mjs`. Keep the JPEG originals in your source backup.
+
 ### Add a view
 
 Add the route to `NAV_CONFIG.views` in the desired menu order. An example entry follows.

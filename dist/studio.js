@@ -5,12 +5,13 @@ const fieldNames = {
   name:"Display name", eyebrow:"Education", headline:"Page description", roles:"Focus areas", location:"Based in", availability:"Availability",
   resume:"Résumé URL", alt:"Image description", aboutTitle:"About heading", aboutIntro:"About introduction", bio:"Biography", footer:"Footer note",
   title:"Title", description:"Description", category:"Category", year:"Date or study label", summary:"Short description", detail:"Case study", highlights:"Design decisions (one per line)", tags:"Tags (comma separated)", url:"Project URL",
-  items:"Skills (comma separated)", organization:"Organization or focus", date:"Date", type:"Milestone type", email:"Contact email", intro:"Contact introduction", github:"GitHub URL", linkedin:"LinkedIn URL", website:"Website URL", accent:"Primary color", secondary:"Secondary color"
+  badge:"Badge label (e.g. Capstone Project)", role:"Role (e.g. Fullstack Developer)", overview:"Architectural overview", contributions:"Key contributions (one per line)", images:"Additional images (comma separated paths)",
+  items:"Skills (comma separated, e.g. React.js, Python, or Custom:icon)", organization:"Organization or focus", date:"Date", type:"Milestone type", email:"Contact email", intro:"Contact introduction", github:"GitHub URL", linkedin:"LinkedIn URL", website:"Website URL", accent:"Primary color", secondary:"Secondary color"
 };
 const groups = {
   certificates:["title","issuer","date","document"],
   profile:["name","headline","location","eyebrow","roles","availability","aboutTitle","aboutIntro","bio"],
-  services:["title","description"], interests:["title","description"], projects:["title","category","year","image","alt","summary","detail","highlights","tags","url"],
+  services:["title","description"], interests:["title","description"], projects:["title","badge","role","category","year","image","images","alt","summary","detail","overview","highlights","contributions","tags","url"],
   skills:["title","description","items"], journey:["title","date","organization","description","type"],
   contact:["email","intro","github","linkedin","website"], appearance:["accent","secondary"]
 };
@@ -87,9 +88,9 @@ function addField(owner, field) {
   }
   const label = node("label","editor-field");
   label.append(node("span","",fieldNames[field]));
-  const multiline = ["bio","summary","description","highlights","detail","intro","headline","aboutIntro"].includes(field);
+  const multiline = ["bio","summary","description","highlights","detail","intro","headline","aboutIntro","items","overview","contributions","images"].includes(field);
   const input = node(multiline ? "textarea" : "input");
-  if (multiline) input.rows = 3;
+  if (multiline) input.rows = field === "items" ? 4 : 3;
   else if (["accent","secondary"].includes(field)) input.type = "color";
   else if (field === "email") input.type = "email";
   else if (["resume","url","github","linkedin","website"].includes(field)) input.type = "url";
