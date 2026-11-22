@@ -37,9 +37,13 @@
   position: absolute; top: 0; left: 0; width: var(--draw-w,100%); height: var(--draw-h,100%);
   transform: translate3d(var(--draw-x,0px),0,0); transform-origin: center top;
 }
-.hero-look > :is(img,canvas) {
+.hero-look > :is(picture,canvas) {
   position: absolute; inset: 0; display: block; width: 100%; height: 100%;
   max-width: none; object-fit: cover; object-position: center top;
+}
+.hero-look picture img {
+  display: block; width: 100%; height: 100%; max-width: none;
+  object-fit: cover; object-position: center top;
 }
 .hero-look canvas { visibility: hidden; }
 .hero-framing[data-painted] canvas { visibility: visible; }
@@ -342,3 +346,63 @@
   [data-target-theme] .hero-dark-ink { opacity:1; }
 }
 @media (prefers-reduced-motion:reduce) { .hero-dark-ink,.hero-light-ink { transition:none; } }
+
+@media (max-width:767px) {
+  [data-static-mobile] .hero-track { height: 100svh; }
+  [data-static-mobile] .hero-stage {
+    position: relative; top: auto; height: 100svh; min-height: 100svh;
+  }
+  [data-static-mobile] .hero-stage canvas { display: none; }
+
+  .hero-display-name {
+    color: transparent;
+    -webkit-text-fill-color: transparent;
+    -webkit-text-stroke: 1px rgba(245,245,240,.92);
+    paint-order: stroke fill;
+  }
+  [data-target-theme="light"] .hero-display-name,
+  [data-theme="light"] .hero-display-name {
+    -webkit-text-stroke-color: rgba(17,17,17,.85);
+  }
+  .hero-display-name,
+  .hero-display-name * {
+    animation: none !important;
+    transition: none !important;
+  }
+  .hero-display-name .letter {
+    background: none !important;
+    filter: none !important;
+    will-change: auto !important;
+  }
+
+  .hero-widgets {
+    padding: 9px 11px;
+    border: 1px solid rgba(255,255,255,.28);
+    border-radius: 10px;
+    color: #fff;
+    background: rgba(0,0,0,.68);
+    box-shadow: none;
+    text-shadow: none;
+  }
+  .hero-widgets.hero-light-ink {
+    --hero-text: #fff;
+    --hero-muted: rgba(255,255,255,.84);
+    --hero-line: rgba(255,255,255,.4);
+  }
+
+  .hero-look[data-look="light"],
+  .hero-stage::before,
+  .hero-dark-ink,
+  .hero-light-ink {
+    will-change: auto;
+    transition: none;
+  }
+}
+
+@media (max-width:767px) and (prefers-reduced-motion:reduce) {
+  .hero-bottom-grad,
+  .hero-info-line,
+  .hero-info-row {
+    transition: none !important;
+  }
+}

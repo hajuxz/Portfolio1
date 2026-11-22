@@ -49,6 +49,27 @@ body { background: var(--bg) radial-gradient(circle,var(--grid-dot) .85px,transp
 @media (max-width: 768px), (pointer: coarse) {
   .shell-pill { backdrop-filter: none; -webkit-backdrop-filter: none; box-shadow: 0 2px 8px var(--shadow); }
 }
+@media (max-width: 767px) {
+  .shell-pill { background: var(--paper); box-shadow: none; }
+  #homeSections { content-visibility: auto; contain-intrinsic-size: auto 3600px; }
+  #homeSections[data-pending] { min-height: 3600px; }
+  .home-section--services { content-visibility: auto; contain-intrinsic-size: auto 1800px; }
+  .home-section--pipeline { content-visibility: auto; contain-intrinsic-size: auto 1800px; }
+  main > .section[data-view] { content-visibility: auto; contain-intrinsic-size: auto 1000px; }
+  .hs-reveal { will-change: auto; }
+  *,*::before,*::after {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    filter: none !important;
+    mix-blend-mode: normal !important;
+    box-shadow: none !important;
+    will-change: auto !important;
+  }
+  dialog::backdrop {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+}
 .menu-trigger { left: max(20px,env(safe-area-inset-left)); }
 .theme-trigger { right: max(20px,env(safe-area-inset-right)); }
 .shell-pill .workspace-icon { width: 16px; height: 16px; }

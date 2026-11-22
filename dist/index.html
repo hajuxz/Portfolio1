@@ -18,7 +18,7 @@
         const theme = saved === "dark" || saved === "light" ? saved : matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
         document.documentElement.dataset.theme = theme;
         document.documentElement.dataset.targetTheme = theme;
-        const isMob = matchMedia("(max-width: 768px)").matches;
+        const isMob = matchMedia("(max-width: 767px)").matches;
         const preload = document.createElement("link");
         preload.rel = "preload"; preload.as = "image";
         preload.href = theme === "light"
@@ -58,8 +58,8 @@
           <div id="heroStage" class="hero-stage">
             <div class="hero-media" aria-hidden="true">
               <div class="hero-framing" id="heroFraming">
-                <div class="hero-look" data-look="dark"><img src="assets/frames/dark/ezgif-frame-001.webp" srcset="assets/frames/dark/ezgif-frame-001-mobile.webp 800w, assets/frames/dark/ezgif-frame-001.webp 1280w" sizes="100vw" width="1280" height="720" alt="" fetchpriority="high"><canvas width="1280" height="720"></canvas></div>
-                <div class="hero-look" data-look="light"><img src="assets/frames/white pic/ezgif-frame-001.webp" srcset="assets/frames/white pic/ezgif-frame-001-mobile.webp 800w, assets/frames/white pic/ezgif-frame-001.webp 1280w" sizes="100vw" width="1280" height="720" alt="" fetchpriority="high"><canvas width="1280" height="720"></canvas></div>
+                <div class="hero-look" data-look="dark"><picture><source media="(max-width: 767px)" srcset="assets/frames/dark/ezgif-frame-001-mobile.webp"><img src="assets/frames/dark/ezgif-frame-001.webp" width="1280" height="720" alt="" fetchpriority="high" decoding="async"></picture><canvas width="1280" height="720"></canvas></div>
+                <div class="hero-look" data-look="light"><picture><source media="(max-width: 767px)" srcset="assets/frames/white%20pic/ezgif-frame-001-mobile.webp"><img src="assets/frames/white pic/ezgif-frame-001.webp" width="1280" height="720" alt="" fetchpriority="high" decoding="async"></picture><canvas width="1280" height="720"></canvas></div>
               </div>
             </div>
             <div class="hero-bottom-grad" aria-hidden="true"></div>

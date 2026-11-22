@@ -9,7 +9,7 @@ const heroMedia = (() => {
   let layoutFrame=0, clockTimer;
   const clamp = (value,min,max) => Math.max(min,Math.min(max,value));
   const reduced = matchMedia("(prefers-reduced-motion: reduce)");
-  const mobileQuery = matchMedia("(max-width: 768px)");
+  const mobileQuery = matchMedia("(max-width: 767px)");
   const canHover = matchMedia("(pointer: fine)");
 
   // ── Letter-wrapping for staggered reveal ──
@@ -19,35 +19,20 @@ const heroMedia = (() => {
     el.textContent = "";
 
     if (mobileQuery.matches) {
-      // Mobile: split into 2 lines — "CHRISTIAN REY" / "ADOLFO"
       const words = rawText.trim().split(/\s+/);
       const line1Text = words.slice(0, -1).join(" ");
       const line2Text = words.at(-1) || "";
-      let charIndex = 0;
-
+      el.setAttribute("aria-label", rawText.trim());
       const line1 = document.createElement("span");
       line1.className = "name-mobile-line";
-      for (let i = 0; i < line1Text.length; i++) {
-        const span = document.createElement("span");
-        span.className = "letter";
-        span.textContent = line1Text[i] === " " ? "\u00A0" : line1Text[i];
-        if (!reduced.matches) span.style.transitionDelay = (charIndex * 35) + "ms";
-        charIndex++;
-        line1.appendChild(span);
-      }
+      line1.textContent = line1Text + " ";
       el.appendChild(line1);
 
       const line2 = document.createElement("span");
       line2.className = "name-mobile-line";
-      for (let i = 0; i < line2Text.length; i++) {
-        const span = document.createElement("span");
-        span.className = "letter";
-        span.textContent = line2Text[i] === " " ? "\u00A0" : line2Text[i];
-        if (!reduced.matches) span.style.transitionDelay = (charIndex * 35) + "ms";
-        charIndex++;
-        line2.appendChild(span);
-      }
+      line2.textContent = line2Text;
       el.appendChild(line2);
+      return;
     } else {
       // Desktop: single line
       const text = rawText.toUpperCase();
@@ -75,7 +60,7 @@ const heroMedia = (() => {
   if (home) heroObserver.observe(home);
 
   function reveal() {
-    if (!reduced.matches) {
+    if (!reduced.matches && !mobileQuery.matches) {
       requestAnimationFrame(() => {
         void title.offsetWidth;
         title.classList.add("is-revealed");
@@ -102,7 +87,7 @@ const heroMedia = (() => {
   });
 
   // ── Cursor highlight for glass letters (inside letters only, pointer: fine only) ──
-  if (canHover.matches && !reduced.matches) {
+  if (canHover.matches && !mobileQuery.matches && !reduced.matches) {
     let mouseFrame = 0;
     window.addEventListener("mousemove", e => {
       if (!heroVisible || home.hidden || mouseFrame) return;

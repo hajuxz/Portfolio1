@@ -1,5 +1,5 @@
 "use strict";
-const {defaults, copy, validate, safeURL} = PortfolioContent;
+const {defaults, copy, validate, safeURL, mobileImageFiles} = PortfolioContent;
 const byId = id => document.getElementById(id);
 const all = selector => [...document.querySelectorAll(selector)];
 const node = (tag, className = "", text = "") => {
@@ -16,6 +16,7 @@ const button = (className, label, action) => {
 };
 const list = (value, delimiter = ",") => value.split(delimiter).map(s => s.trim()).filter(Boolean);
 const key = "orbitfolio.content.v1";
+const mobileImageFileSet = new Set(mobileImageFiles);
 let saved = copy(defaults), current = saved, filter = "";
 let serverMode = false, canPublish = false, revision = "", adminToken = "";
 const reduced = matchMedia("(prefers-reduced-motion: reduce)");
@@ -37,12 +38,23 @@ function external(label, url, className = "") {
   return a;
 }
 function imageFor(src, alt, fallback) {
+  const picture = node("picture");
+  const mobileFile = src.replace(/\.(?:jpe?g|png)$/i, "-mobile.webp");
+  let mobileSource;
+  if (mobileImageFileSet.has(mobileFile)) {
+    mobileSource = node("source");
+    mobileSource.media = "(max-width: 767px)";
+    mobileSource.srcset = mobileFile;
+    picture.append(mobileSource);
+  }
   const img = node("img");
   img.loading = "lazy";
+  img.decoding = "async";
   img.src = src;
   img.alt = alt;
-  img.onerror = () => { img.onerror = null; img.src = fallback; };
-  return img;
+  img.onerror = () => { img.onerror = null; mobileSource?.remove(); img.src = fallback; };
+  picture.append(img);
+  return picture;
 }
 function tags(value, className = "tag") {
   const wrapper = node("div", className === "tag" ? "tag-list" : "skill-cloud");
@@ -131,6 +143,7 @@ function skillCard(skill, index) {
       image.alt = "";
       image.width = image.height = 16;
       image.loading = "lazy";
+      image.decoding = "async";
       image.src = "assets/workspace/" + brandFile + ".svg";
       glyph.classList.add("brand-" + brandFile);
       glyph.append(image);
@@ -195,11 +208,22 @@ function render(content) {
     link.rel = "noopener noreferrer";
     link.setAttribute("aria-label","Open "+c.title+" in a new tab");
     if (original) {
+      const picture = node("picture");
       const preview = node("img","certificate-preview");
+      const mobileFile = original.preview.replace(/\.(?:jpe?g|png)$/i, "-mobile.webp");
+      if (mobileImageFileSet.has(mobileFile)) {
+        const mobileSource = node("source");
+        mobileSource.media = "(max-width: 767px)";
+        mobileSource.srcset = mobileFile;
+        picture.append(mobileSource);
+        preview.onerror = () => { mobileSource.remove(); preview.onerror = null; preview.src = original.preview; };
+      }
       preview.src = original.preview;
       preview.alt = "";
       preview.loading = "lazy";
-      link.append(preview);
+      preview.decoding = "async";
+      picture.append(preview);
+      link.append(picture);
     }
     const caption = node("div","certificate-caption");
     caption.append(node("p","certificate-date",c.date),node("h4","",c.title),node("p","certificate-issuer",c.issuer),

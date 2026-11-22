@@ -397,6 +397,13 @@ html[data-theme="dark"] .step-card.is-active {
   pointer-events: none;
   z-index: 4;
 }
+@media (max-width: 767px) {
+  .step-card__progress {
+    width: 100%;
+    transform: scaleX(0);
+    transform-origin: left;
+  }
+}
 html[data-theme="dark"] .step-card__progress {
   background: #f6f7fb;
 }

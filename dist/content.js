@@ -49,6 +49,12 @@
   };
 
   const copy = value => JSON.parse(JSON.stringify(value));
+  const mobileImageFiles = [...new Set([
+    ...defaults.projects.map(project => project.image),
+    ...defaults.projects.flatMap(project => (project.images || "").split(",").map(src => src.trim()).filter(Boolean)),
+    ...certificateLibrary.map(certificate => certificate.preview)
+  ])].filter(src => /\.(?:jpe?g|png)$/i.test(src))
+    .map(src => src.replace(/\.(?:jpe?g|png)$/i, "-mobile.webp"));
   const safeURL = value => {
     if (!value) return "";
     try {
@@ -121,5 +127,5 @@
     if (JSON.stringify(checked.skills) === JSON.stringify(previousSkills)) checked.skills = copy(defaults.skills);
     return checked;
   }
-  globalThis.PortfolioContent = {defaults, copy, safeURL, validate, certificateLibrary};
+  globalThis.PortfolioContent = {defaults, copy, safeURL, validate, certificateLibrary, mobileImageFiles};
 })();

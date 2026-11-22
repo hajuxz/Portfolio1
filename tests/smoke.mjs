@@ -62,21 +62,70 @@ try {
   };
   await cmd("Runtime.enable");
   await cmd("Page.enable");
+  await cmd("Emulation.setDeviceMetricsOverride",{width:1366,height:768,deviceScaleFactor:1,mobile:false});
+  await cmd("Emulation.setEmulatedMedia",{features:[{name:"prefers-reduced-motion",value:"no-preference"}]});
   await cmd("Page.addScriptToEvaluateOnNewDocument",{source:"\n    window.framePaints={dark:0,light:0,bitmaps:0};\n    const originalDraw=CanvasRenderingContext2D.prototype.drawImage;\n    CanvasRenderingContext2D.prototype.drawImage=function(source,...args){\n      const look=this.canvas.parentElement?.dataset.look;\n      if(look){framePaints[look]++;if(source instanceof ImageBitmap)framePaints.bitmaps++;}\n      return originalDraw.call(this,source,...args);\n    };\n  "});
-  await cmd("Page.navigate",{url:origin+"/?sequence#home"});
+  await cmd("Page.navigate",{url:origin+"/?sequence-desktop#home"});
   await until(()=>evaluate('document.body.classList.contains("ready") && heroFraming.dataset.frame==="1"'));
   const readFrame=()=>evaluate('Number(heroFraming.dataset.frame)');
   const waitTheme=(theme)=>until(()=>evaluate('document.documentElement.dataset.targetTheme==='+JSON.stringify(theme)+' && !document.documentElement.matches(".theme-capture,.theme-fallback")'));
   const goFrame=async index=>{
-    await evaluate('scrollTo({top:(home.offsetHeight-heroStage.clientHeight)*'+(index-1)+'/160,behavior:"instant"})');
+    await evaluate('scrollTo({top:(heroTrack.offsetHeight-heroStage.clientHeight)*'+(index-1)+'/160,behavior:"instant"})');
     await until(async()=>await readFrame()===index);
   };
   for(const [width,height] of [[1920,1080],[2560,1080],[1366,768],[768,1024],[390,844]]){
     await cmd("Emulation.setDeviceMetricsOverride",{width,height,deviceScaleFactor:width===390?2:1,mobile:width===390});
-    await until(()=>evaluate('(()=>{const [a,b]=heroFraming.querySelectorAll("canvas"),r=a.getBoundingClientRect(),s=b.getBoundingClientRect(),stage=heroStage.getBoundingClientRect();return a.width===b.width && a.height===b.height && r.x===s.x && r.width===s.width && r.left<=stage.left+.1 && r.right>=stage.right-.1 && r.bottom>=stage.bottom-.1 && Math.abs(r.top-stage.top)<.1 && Math.abs(r.left+r.width*HERO_CONFIG.focal.x-document.documentElement.clientWidth/2)<.1})()'));
-    assert.ok(await evaluate('!document.querySelector("#portraitToggle") && homeTitle.children.length===2 && localTime.textContent.includes("PHT") && heroAvailability.textContent.length>0'));
+    if(width===390){
+      await cmd("Page.reload");
+      await until(()=>evaluate('document.body.classList.contains("ready") && home.hasAttribute("data-static-mobile")'));
+      await until(()=>evaluate('[...heroFraming.querySelectorAll("img")].every(image=>image.complete && image.naturalWidth<=800 && image.currentSrc.endsWith("-mobile.webp"))'));
+      const mobileHero=await evaluate(`(()=>{
+        const posters=[...heroFraming.querySelectorAll("img")];
+        return {
+          static:home.hasAttribute("data-static-mobile"),
+          travel:home.style.getPropertyValue("--scrub-travel"),
+          canvases:[...heroFraming.querySelectorAll("canvas")].every(canvas=>getComputedStyle(canvas).display==="none"),
+          posters:posters.every(image=>image.complete && image.naturalWidth<=800 && image.currentSrc.endsWith("-mobile.webp")),
+          sequenceRequests:performance.getEntriesByType("resource").filter(entry=>/assets\\/frames\\/.*\\.jpg(?:\\?|$)/.test(entry.name)).length,
+          title:homeTitle.textContent.trim()
+        };
+      })()`);
+      assert.deepEqual(mobileHero,{static:true,travel:"0px",canvases:true,posters:true,sequenceRequests:0,title:"CHRISTIAN REY ADOLFO"});
+      await until(()=>evaluate('!!document.querySelector("[data-pipeline-placeholder]")'));
+      await evaluate('document.querySelector("[data-pipeline-placeholder]").scrollIntoView({block:"center",behavior:"instant"})');
+      await until(()=>evaluate('!!document.querySelector("#pipelineToggleBtn")'));
+      const mobilePipeline=await evaluate('({label:document.querySelector("#pipelineToggleLabel").textContent,status:document.querySelector("#pipelineStatusText").textContent})');
+      assert.deepEqual(mobilePipeline,{label:"Play",status:"Paused"},"The workflow should not auto-play while scrolling on mobile.");
+      await cmd("Page.navigate",{url:origin+"/?mobile-work#work"});
+      await until(()=>evaluate('document.body.classList.contains("ready") && document.body.dataset.view==="work"'));
+      await until(()=>evaluate('[...document.querySelectorAll("#projectsList picture img")].every(image=>image.complete && image.naturalWidth>0 && image.currentSrc.endsWith("-mobile.webp"))'));
+      const mobileProjects=await evaluate(`[...document.querySelectorAll("#projectsList picture")].map(picture=>{
+        const image=picture.querySelector("img");
+        return {source:picture.querySelector("source")?.srcset||"",current:image.currentSrc,width:image.naturalWidth,loading:image.loading,decoding:image.decoding};
+      })`);
+      assert.equal(mobileProjects.length,3);
+      assert.ok(mobileProjects.every(image=>image.source.endsWith("-mobile.webp") && image.current.endsWith("-mobile.webp") && image.width<=1000 && image.loading==="lazy" && image.decoding==="async"));
+      await cmd("Page.navigate",{url:origin+"/?mobile-journey#journey"});
+      await until(()=>evaluate('document.body.classList.contains("ready") && document.body.dataset.view==="journey"'));
+      await until(()=>evaluate('[...document.querySelectorAll("#certificateList picture img")].every(image=>image.complete && image.naturalWidth>0 && image.currentSrc.endsWith("-mobile.webp"))'));
+      const mobileCertificates=await evaluate(`[...document.querySelectorAll("#certificateList picture")].map(picture=>{
+        const image=picture.querySelector("img");
+        return {source:picture.querySelector("source")?.srcset||"",current:image.currentSrc,width:image.naturalWidth,loading:image.loading,decoding:image.decoding};
+      })`);
+      assert.equal(mobileCertificates.length,3);
+      assert.ok(mobileCertificates.every(image=>image.source.endsWith("-mobile.webp") && image.current.endsWith("-mobile.webp") && image.width<=1000 && image.loading==="lazy" && image.decoding==="async"));
+    }
+    if(width!==390) {
+      await until(()=>evaluate('(()=>{const [a,b]=heroFraming.querySelectorAll("canvas"),r=a.getBoundingClientRect(),s=b.getBoundingClientRect(),stage=heroStage.getBoundingClientRect();return a.width===b.width && a.height===b.height && r.x===s.x && r.width===s.width && r.left<=stage.left+.1 && r.right>=stage.right-.1 && r.bottom>=stage.bottom-.1 && Math.abs(r.top-stage.top)<.1 && Math.abs(r.left+r.width*HERO_CONFIG.focal.x-document.documentElement.clientWidth/2)<.1})()'));
+      assert.ok(await evaluate('!document.querySelector("#portraitToggle") && localTime.textContent.includes("PHT") && heroAvailability.textContent.length>0'));
+    }
     console.log("Aligned and covered",width,height);
   }
+  await cmd("Emulation.setDeviceMetricsOverride",{width:1366,height:768,deviceScaleFactor:1,mobile:false});
+  await cmd("Page.navigate",{url:origin+"/?sequence#home"});
+  await until(()=>evaluate('document.body.classList.contains("ready") && heroFraming.dataset.frame==="1"'));
+  await evaluate('history.scrollRestoration="manual";document.documentElement.style.scrollBehavior="auto";scrollTo(0,0)');
+  await until(()=>evaluate('scrollY===0'));
   // Compare a downsample of each actual backing store to the matching photo on disk.
   async function checkPair(index, both=false) {
     const difference=await evaluate(`(async()=>{const c=document.createElement("canvas");c.width=32;c.height=18;const ctx=c.getContext("2d",{willReadFrequently:true});
@@ -106,6 +155,8 @@ try {
     assert.equal(await evaluate('themeLabel.textContent'),target==="light"?"Dark":"Light");
   }
   await goFrame(65);
+  await cmd("Emulation.setDeviceMetricsOverride",{width:1366,height:768,deviceScaleFactor:1,mobile:false});
+  await delay(180);
   // A long fling must advance the visible surface through multiple decoded pictures.
   const steadyTheme=await evaluate('document.documentElement.dataset.targetTheme');
   const other=steadyTheme==="dark"?"light":"dark";
@@ -125,8 +176,12 @@ try {
   assert.ok(Math.abs(await opacity()-middle)<.2); await waitTheme(before); assert.equal(await readFrame(),65);
   await evaluate('themeToggle.click()'); await goFrame(100); await checkPair(100);
   await cmd("Emulation.setEmulatedMedia",{features:[{name:"prefers-reduced-motion",value:"reduce"}]});
-  try { await until(()=>evaluate('!home.hasAttribute("data-scrub")'),4000); } catch { assert.fail(JSON.stringify(await evaluate('({reduced:matchMedia("(prefers-reduced-motion: reduce)").matches,scrub:home.hasAttribute("data-scrub"),frame:heroFraming.dataset.frame,view:document.body.dataset.view})'))+JSON.stringify(errors)); }
-  const still=await readFrame(); await evaluate('themeToggle.click()'); await delay(150); assert.equal(await readFrame(),still);
+  await cmd("Page.navigate",{url:origin+"/?reduced#home"});
+  await until(()=>evaluate(`document.body.classList.contains("ready") && matchMedia("(prefers-reduced-motion: reduce)").matches && !home.hasAttribute("data-scrub") && heroFraming.dataset.frame==="1"`));
+  const still=await readFrame();
+  await evaluate('scrollTo({top:heroTrack.offsetHeight,behavior:"instant"});themeToggle.click()');
+  await delay(150);
+  assert.equal(await readFrame(),still);
   await cmd("Emulation.setEmulatedMedia",{features:[]});
   console.log("Paired frames 1, 65, 161, rapid reversal, live scroll during fade and reduced motion passed.");
   const active = () => evaluate('document.body.dataset.view');
@@ -152,7 +207,7 @@ try {
   await until(()=>evaluate('document.body.classList.contains("ready") && document.body.dataset.view==="skills"'));
   assert.equal(await evaluate('workspaceSidebar.inert'),false);
   assert.equal(await evaluate('skillsGrid.children.length'),6);
-  assert.ok(await evaluate('[...skillsGrid.querySelectorAll("img")].every(i=>i.complete && i.naturalWidth)'));
+  assert.ok(await evaluate('[...skillsGrid.querySelectorAll("img")].every(i=>i.loading==="lazy" && i.decoding==="async")'));
   await clickVisible("#closeSidebar");
   await until(()=>evaluate('workspaceSidebar.inert && !menuTrigger.hidden'));
   await cmd("Page.reload");

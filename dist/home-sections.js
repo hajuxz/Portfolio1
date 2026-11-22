@@ -274,7 +274,7 @@ function buildServicesSection() {
       const key = tech.toLowerCase().replace(/[^a-z0-9]/g, "");
       const brandSrc = BRAND_MAP[key];
       if (brandSrc) {
-        return `<span class="svc-chip"><img src="${brandSrc}" alt="" width="14" height="14" loading="lazy" /><span>${tech}</span></span>`;
+        return `<span class="svc-chip"><img src="${brandSrc}" alt="" width="14" height="14" loading="lazy" decoding="async" /><span>${tech}</span></span>`;
       }
       return `<span class="svc-chip"><span>${tech}</span></span>`;
     }).join("");
@@ -469,7 +469,9 @@ function initPipelineEngine(container) {
   let progressStartTime = 0;
   let progressRaf = null;
 
+  const mobileQuery = window.matchMedia("(max-width: 767px)");
   const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if (mobileQuery.matches) isPaused = true;
   if (reducedMotion) {
     isPaused = true;
     isUserPaused = true;
@@ -533,7 +535,13 @@ function initPipelineEngine(container) {
     cancelAnimationFrame(progressRaf);
     cards.forEach(card => {
       const bar = card.querySelector(".step-card__progress");
-      if (bar) bar.style.width = "0%";
+      if (!bar) return;
+      if (mobileQuery.matches) {
+        bar.style.transition = "none";
+        bar.style.transform = "scaleX(0)";
+      } else {
+        bar.style.width = "0%";
+      }
     });
   }
 
@@ -541,6 +549,16 @@ function initPipelineEngine(container) {
     if (reducedMotion || isPaused) return;
     const bar = card.querySelector(".step-card__progress");
     if (!bar) return;
+
+    if (mobileQuery.matches) {
+      progressRaf = requestAnimationFrame(() => {
+        progressRaf = null;
+        if (isPaused || !mobileQuery.matches) return;
+        bar.style.transition = `transform ${STEP_DURATION}ms linear`;
+        bar.style.transform = "scaleX(1)";
+      });
+      return;
+    }
 
     progressStartTime = performance.now();
 
@@ -566,7 +584,14 @@ function initPipelineEngine(container) {
       card.setAttribute("aria-current", isCurrent ? "step" : "false");
       card.classList.toggle("is-active", isCurrent);
       const bar = card.querySelector(".step-card__progress");
-      if (bar && !isCurrent) bar.style.width = "0%";
+      if (bar && !isCurrent) {
+        if (mobileQuery.matches) {
+          bar.style.transition = "none";
+          bar.style.transform = "scaleX(0)";
+        } else {
+          bar.style.width = "0%";
+        }
+      }
     });
 
     crossFadeDetail(stepData);
@@ -619,6 +644,10 @@ function initPipelineEngine(container) {
       pause(true);
     }
   });
+  mobileQuery.addEventListener("change", event => {
+    if (event.matches) pause(false);
+    else if (inView && !isUserPaused && !reducedMotion) start();
+  });
 
   // Step card clicks
   cards.forEach((card, idx) => {
@@ -650,7 +679,7 @@ function initPipelineEngine(container) {
   const observer = new IntersectionObserver(([entry]) => {
     inView = entry.isIntersecting;
     if (inView) {
-      if (!isUserPaused && !reducedMotion) start();
+      if (!isUserPaused && !reducedMotion && (!mobileQuery.matches || !isPaused)) start();
     } else {
       clearTimeout(stepTimer);
       cancelAnimationFrame(progressRaf);
@@ -700,22 +729,51 @@ function initHomeSections() {
   const container = document.getElementById("homeSections");
   if (!container) return;
 
-  // Clear any existing content
   container.innerHTML = "";
+  const isMobile = window.matchMedia("(max-width: 767px)").matches;
+  if (isMobile) container.dataset.pending = "";
 
-  // 1. Build and append Services Grid
-  const servicesSec = buildServicesSection();
-  container.appendChild(servicesSec);
+  const scheduleIdle = callback => {
+    if ("requestIdleCallback" in window) requestIdleCallback(callback,{timeout:1500});
+    else setTimeout(callback,0);
+  };
+  let pipelinePlaceholder = null;
+  const mountPipeline = () => {
+    const pipelineSec = buildPipelineSection();
+    if (pipelinePlaceholder) pipelinePlaceholder.replaceWith(pipelineSec);
+    else container.appendChild(pipelineSec);
+    initPipelineEngine(pipelineSec);
+    initScrollReveal(pipelineSec);
+    delete container.dataset.pending;
+  };
 
-  // 2. Build and append Process Pipeline
-  const pipelineSec = buildPipelineSection();
-  container.appendChild(pipelineSec);
+  const mountServices = () => {
+    const servicesSec = buildServicesSection();
+    container.appendChild(servicesSec);
+    initScrollReveal(servicesSec);
+    if (isMobile) {
+      pipelinePlaceholder = document.createElement("section");
+      pipelinePlaceholder.className = "home-section home-section--pipeline";
+      pipelinePlaceholder.dataset.pipelinePlaceholder = "";
+      pipelinePlaceholder.setAttribute("aria-hidden","true");
+      pipelinePlaceholder.style.minHeight = "1800px";
+      container.appendChild(pipelinePlaceholder);
+      const observer = new IntersectionObserver(([entry]) => {
+        if (!entry.isIntersecting) return;
+        observer.disconnect();
+        scheduleIdle(mountPipeline);
+      },{rootMargin:"300px 0px"});
+      observer.observe(pipelinePlaceholder);
+    } else {
+      mountPipeline();
+    }
+  };
 
-  // 3. Initialize Process Pipeline Interactivity
-  initPipelineEngine(pipelineSec);
-
-  // 4. Initialize Scroll Reveal
-  initScrollReveal(container);
+  if (isMobile) {
+    scheduleIdle(mountServices);
+  } else {
+    mountServices();
+  }
 }
 
 // Run when DOM is ready
