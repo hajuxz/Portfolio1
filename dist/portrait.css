@@ -20,7 +20,7 @@
   --gutter: clamp(24px, 4.7vw, 96px);
   position: sticky; top: 0; height: 100vh; height: 100dvh; min-height: 100svh;
   width: 100%; overflow: clip; isolation: isolate; container-type: inline-size;
-  contain: layout paint style; will-change: transform;
+  contain: layout paint style;
   background: radial-gradient(ellipse 80% 70% at 50% 40%, #1e1e1e, #111 60%, #0a0a0a);
 }
 [data-target-theme="light"] .hero-stage,
@@ -110,7 +110,7 @@
   background-size: 100% 100%, 260% 100%, 100% 100%;
   background-position: 0 0, 200% 0, 0 0;
   background-repeat: no-repeat;
-  background-attachment: fixed, fixed, scroll;
+  background-attachment: scroll;
   -webkit-background-clip: text;
   background-clip: text;
   filter: drop-shadow(0 2px 14px rgba(0,0,0,0.35));
@@ -124,6 +124,10 @@
   opacity: 1;
   transform: translateY(0);
   transition: opacity 0.9s cubic-bezier(.2,.8,.2,1), transform 0.9s cubic-bezier(.2,.8,.2,1);
+}
+
+.hero-display-name.reveal-complete .letter {
+  will-change: auto;
 }
 
 /* Diagonal light sheen sweep across letters on load (~1.4s) */
@@ -253,7 +257,7 @@
 .hero-track {
   position: relative;
   width: 100%;
-  height: calc(100vh + var(--scrub-travel, max(1500px, 240svh)));
+  height: calc(100dvh + var(--scrub-travel, max(1500px, 240svh)));
 }
 .sunglasses-hero[data-scrub]::after { display: none; }
 
@@ -292,6 +296,18 @@
     flex-direction: column;
     align-items: flex-start;
     gap: 6px;
+  }
+  .hero-display-name .letter {
+    background-image: linear-gradient(180deg, rgba(255,255,255,0.20) 0%, rgba(255,255,255,0.03) 100%) !important;
+    background-attachment: scroll !important;
+    filter: drop-shadow(0 1px 4px rgba(0,0,0,0.25)) !important;
+    will-change: auto !important;
+    animation: none !important;
+  }
+  [data-target-theme="light"] .hero-display-name .letter,
+  [data-theme="light"] .hero-display-name .letter {
+    background-image: linear-gradient(180deg, rgba(0,0,0,0.12) 0%, rgba(0,0,0,0.02) 100%) !important;
+    filter: drop-shadow(0 1px 4px rgba(0,0,0,0.12)) !important;
   }
 }
 

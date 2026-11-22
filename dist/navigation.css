@@ -46,6 +46,9 @@ body { background: var(--bg) radial-gradient(circle,var(--grid-dot) .85px,transp
 .workspace-meta { justify-content: space-between; margin-top: 16px; color: var(--secondary); font: 10px/1.4 var(--font-mono); }
 .workspace-meta .workspace-icon { width: 13px; height: 13px; }
 .shell-pill { position: fixed; z-index: 1200; top: max(18px,env(safe-area-inset-top)); display: flex; align-items: center; gap: 9px; min-height: 44px; padding: 0 17px; border: 1px solid var(--nav-border); border-radius: 100px; color: var(--text); background: var(--nav-bg); backdrop-filter: blur(12px); box-shadow: 0 4px 16px var(--shadow); font: 12px/1 var(--font-mono); cursor: pointer; }
+@media (max-width: 768px), (pointer: coarse) {
+  .shell-pill { backdrop-filter: none; -webkit-backdrop-filter: none; box-shadow: 0 2px 8px var(--shadow); }
+}
 .menu-trigger { left: max(20px,env(safe-area-inset-left)); }
 .theme-trigger { right: max(20px,env(safe-area-inset-right)); }
 .shell-pill .workspace-icon { width: 16px; height: 16px; }

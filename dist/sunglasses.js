@@ -4,10 +4,16 @@
   const home=document.getElementById("home"), stage=document.getElementById("heroStage");
   const framing=document.getElementById("heroFraming");
   const reduced=matchMedia("(prefers-reduced-motion: reduce)");
+  const isMobile = matchMedia("(max-width: 768px)").matches;
   const layers=Array.from(framing.children,element=>{
     const image=element.querySelector("img"), canvas=element.querySelector("canvas");
     const theme=element.dataset.look;
-    image.src=frameURL(theme,1) || frameURL("dark",1);
+    if (!image.getAttribute("src")) {
+      const defaultPoster = theme === "light"
+        ? (isMobile ? "assets/frames/white pic/ezgif-frame-001-mobile.webp" : "assets/frames/white pic/ezgif-frame-001.webp")
+        : (isMobile ? "assets/frames/dark/ezgif-frame-001-mobile.webp" : "assets/frames/dark/ezgif-frame-001.webp");
+      image.src = defaultPoster;
+    }
     if (theme==="light") {
       if (!FRAME_PATH.light) image.classList.add("derived-light");
       image.onerror=()=>{ image.onerror=null; image.classList.add("derived-light"); image.src=frameURL("dark",1); };
@@ -21,7 +27,7 @@
     if (!framing.hasAttribute("data-painted") || currentFrame!==Math.round(targetFrame) || index===currentFrame) wake();
   });
   // Native scroll is the sole input. The sticky stage and its shared 3D transform stay in CSS.
-  home.style.setProperty("--scrub-travel",Math.max(1500,innerHeight*2.4)+"px");
+  home.style.setProperty("--scrub-travel", isMobile ? Math.max(700, innerHeight * 1.0) + "px" : Math.max(1500, innerHeight * 2.4) + "px");
   let top=0, travel=1, stageWidth=0, stageHeight=0, width=0, height=0;
   let targetFrame=1, committedTarget=1, playhead=1, currentFrame=1;
   let theme=document.documentElement.dataset.targetTheme, blendUntil=0;
@@ -32,11 +38,19 @@
   function wake() { if (active && !raf) raf=requestAnimationFrame(tick); }
 
   // scrollY is the native scroll offset. All element geometry was cached on resize.
+  let scrollTicking = false;
   function onScroll() {
     if (!active || reduced.matches) return;
-    const progress=Math.max(0,Math.min(1,(window.scrollY-top)/travel));
-    targetFrame=1+(FRAME_COUNT-1)*progress;
-    wake();
+    if (!scrollTicking) {
+      scrollTicking = true;
+      requestAnimationFrame(() => {
+        scrollTicking = false;
+        if (!active || reduced.matches) return;
+        const progress = Math.max(0, Math.min(1, (window.scrollY - top) / travel));
+        targetFrame = 1 + (FRAME_COUNT - 1) * progress;
+        wake();
+      });
+    }
   }
 
   function measure() {

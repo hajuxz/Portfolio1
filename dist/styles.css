@@ -1,4 +1,12 @@
 
+@font-face {
+  font-family: Anton;
+  src: url("assets/anton/anton-latin-400-normal.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+}
+
 :root {
   --ink: #111827;
   --ink-rgb: 17, 24, 39;

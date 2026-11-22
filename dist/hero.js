@@ -63,15 +63,30 @@ const heroMedia = (() => {
 
   wrapLetters(title);
 
+  let heroVisible = true;
+  const heroObserver = new IntersectionObserver(([entry]) => {
+    heroVisible = entry.isIntersecting;
+    if (heroVisible) {
+      updateTime();
+    } else {
+      clearTimeout(clockTimer);
+    }
+  }, { threshold: 0.02 });
+  if (home) heroObserver.observe(home);
+
   function reveal() {
     if (!reduced.matches) {
       requestAnimationFrame(() => {
         void title.offsetWidth;
         title.classList.add("is-revealed");
         nameBlock.classList.add("is-revealed");
+        setTimeout(() => {
+          title.classList.add("reveal-complete");
+        }, 2200);
       });
     } else {
       title.classList.add("is-revealed");
+      title.classList.add("reveal-complete");
       nameBlock.classList.add("is-revealed");
     }
   }
@@ -80,7 +95,7 @@ const heroMedia = (() => {
 
   // Re-wrap on mobile breakpoint change
   mobileQuery.addEventListener("change", () => {
-    title.classList.remove("is-revealed");
+    title.classList.remove("is-revealed", "reveal-complete");
     nameBlock.classList.remove("is-revealed");
     wrapLetters(title);
     reveal();
@@ -90,7 +105,7 @@ const heroMedia = (() => {
   if (canHover.matches && !reduced.matches) {
     let mouseFrame = 0;
     window.addEventListener("mousemove", e => {
-      if (home.hidden || mouseFrame) return;
+      if (!heroVisible || home.hidden || mouseFrame) return;
       mouseFrame = requestAnimationFrame(() => {
         title.style.setProperty("--mx", e.clientX + "px");
         title.style.setProperty("--my", e.clientY + "px");
@@ -121,7 +136,7 @@ const heroMedia = (() => {
 
   function updateTime() {
     clearTimeout(clockTimer);
-    if (home.hidden || document.hidden) return;
+    if (!heroVisible || home.hidden || document.hidden) return;
     time.textContent = clock.format(new Date())+" PHT";
     clockTimer = setTimeout(updateTime,60000 - Date.now()%60000);
   }
